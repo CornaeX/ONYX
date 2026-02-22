@@ -22,16 +22,6 @@ export const Navbar = () => {
             className="bg-transparent border-none text-sm text-white focus:outline-none ml-2 w-full placeholder-gray-600"
           />
         </div>
-
-        {/* 2. Casino / Sports Switch (The "Floating Pill") */}
-        <div className="hidden lg:flex bg-[#0B1426] p-1 rounded-xl border border-[#1E2D4A]">
-           <button className="px-6 py-2 rounded-lg text-xs font-bold bg-[#007AFF] text-white shadow-[0_0_15px_rgba(0,122,255,0.3)]">
-             CASINO
-           </button>
-           <button className="px-6 py-2 rounded-lg text-xs font-bold text-gray-400 hover:text-white transition-colors">
-             SPORTS
-           </button>
-        </div>
       </div>
 
 

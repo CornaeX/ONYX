@@ -12,7 +12,7 @@ export const Layout = ({ children }: LayoutProps) => {
     <div className="flex min-h-screen bg-[#040B1C] text-white font-sans selection:bg-blue-500/30">
       
       {/* Sidebar */}
-      <aside className="fixed inset-y-0 left-0 z-50 w-[280px] bg-[#0B1426] border-r border-[#1E2D4A] hidden xl:flex flex-col shadow-2xl shadow-black/50">
+      <aside className="fixed inset-y-0 left-0 z-50 bg-[#0B1426] border-r border-[#1E2D4A] hidden xl:flex flex-col shadow-2xl shadow-black/50">
         <Sidebar />
       </aside>
 

@@ -41,7 +41,7 @@ export const Home = () => {
       {/* SECTION 2: FILTERS & SEARCH */}
       <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-[#112240] p-4 rounded-xl border border-gray-700">
         <div className="flex gap-2 overflow-x-auto w-full md:w-auto">
-           {['All Games', 'Slots', 'Live', 'Table', 'Jackpots'].map((tab, i) => (
+           {['All Games', 'Table Games', 'Slots', 'EarnBet', 'Lottery', 'Crash'].map((tab, i) => (
              <button key={i} className={`px-6 py-2 rounded-lg font-semibold whitespace-nowrap ${i === 0 ? 'bg-blue-600 text-white' : 'hover:bg-gray-700 text-gray-400'}`}>
                {tab}
              </button>
