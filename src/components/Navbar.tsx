@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Bell, Gift, Wallet, ChevronDown, User } from 'lucide-react';
+import { Search, Gift, User } from 'lucide-react';
 import { useStore } from '../store/useStore';
 
 export const Navbar = () => {

@@ -19,7 +19,7 @@ const WinnerPanel = () => {
   const [winner, setWinner] = useState<User | null>(null);
   const [prize, setPrize] = useState(0);
 
-  useEffect(() => {
+  const selectRandomWinner = () => {
     // Select a random logged-in user
     const loggedInUser = users[Math.floor(Math.random() * users.length)];
 
@@ -34,6 +34,13 @@ const WinnerPanel = () => {
 
     setWinner(randomWinner);
     setPrize(randomPrize);
+  };
+
+  useEffect(() => {
+    selectRandomWinner(); // Select initial winner
+    const intervalId = setInterval(selectRandomWinner, 5000); // Update every 5 seconds
+
+    return () => clearInterval(intervalId); // Cleanup on unmount
   }, []);
 
   if (!winner) {
