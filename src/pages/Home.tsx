@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search, Filter, ChevronLeft, ChevronRight } from 'lucide-react';
+import WinnerPanel from '../components/WinnerPanel';
 
 export const Home = () => {
   return (
@@ -36,6 +37,9 @@ export const Home = () => {
           </div>
         </div>
       </section>
+
+      <WinnerPanel />
+
 
 
       {/* SECTION 2: FILTERS & SEARCH */}
