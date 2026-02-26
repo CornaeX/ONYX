@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { 
-  Gamepad2, Tv, LayoutGrid, Rocket, 
-  Video, Crown, Gift, Award, 
-  BookOpen, Users, Headset, ChevronUp,
+  Gamepad2, LayoutGrid, Rocket, 
+  Crown, Gift, Award, 
+  Trophy, Users, Headset, ChevronUp,
   Bomb, Globe, Coins
 } from 'lucide-react';
 
@@ -86,32 +86,24 @@ export const Sidebar = () => {
         </div>
 
         {/* Other Sections */}
-        <div className="mt-4 pt-2 border-t border-white/5 space-y-1">
-          {[
-            { icon: Award, label: 'Rewards', count: '26' },
-            { icon: BookOpen, label: 'Blog' },
-            { icon: Crown, label: 'Vip Club' },
-            { icon: Users, label: 'Affiliate Program' },
-          ].map((item, idx) => (
-            <button key={idx} className="w-full flex items-center gap-3 px-5 py-3 hover:bg-white/5 rounded-xl transition-all group">
-              <item.icon size={18} className="text-[#4e6285] group-hover:text-blue-400" />
-              <span className="text-[13px] font-medium">{item.label}</span>
-              {item.count && (
-                 <span className="ml-auto text-[10px] bg-blue-600/90 text-white px-2 py-0.5 rounded-md shadow-lg shadow-blue-900/20">
-                 {item.count}
-               </span>
-              )}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 4. Support Button */}
-      <div className="p-4 pt-2">
-        <button className="w-full bg-gradient-to-b from-[#1e2d4d] to-[#0a162e] border border-white/10 rounded-xl py-4 flex items-center justify-center gap-3 text-white font-bold shadow-xl hover:brightness-125 transition-all">
-          <Headset size={20} className="text-blue-400" />
-          <span>Support</span>
-        </button>
+        <div className="mt-4 pt-4 border-t border-white/5 space-y-2 px-1">
+  {[
+    { icon: Award, label: 'Rewards', count: '26' },
+    { icon: Trophy, label: 'Rank' },
+    // { icon: Crown, label: 'Vip Club' },
+    // { icon: Users, label: 'Affiliate Program' },
+  ].map((item, idx) => (
+    <button key={idx} className="w-full flex items-center gap-3 px-4 py-3 bg-[#121e36]/60 hover:bg-[#1a2a47] rounded-2xl border border-white/5 transition-all group shadow-sm">
+      <item.icon size={18} className="text-[#4e6285] group-hover:text-blue-400" />
+      <span className="text-[13px] font-medium text-[#8a9db7] group-hover:text-white transition-colors">{item.label}</span>
+      {item.count && (
+         <span className="ml-auto text-[10px] bg-blue-600 text-white px-2 py-0.5 rounded-full shadow-lg shadow-blue-900/20">
+         {item.count}
+       </span>
+      )}
+    </button>
+  ))}
+</div>
       </div>
 
     </div>
