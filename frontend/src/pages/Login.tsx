@@ -1,19 +1,50 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { LogIn, Github, Chrome } from 'lucide-react';
+import { LogIn } from 'lucide-react';
 import { useNavigate } from "react-router-dom";
+import { loginUser } from '../services/authService';
+import { fetchProfile } from "../services/userService";
+import { useStore } from "../store/useStore";
+
 
 const Login: React.FC = () => {
     const navigate = useNavigate();
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState(''); // Added to handle errors
+
+    const { setUser, setBalance } = useStore();
+
+    const handleLogin = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+
+        try {
+            await loginUser(email, password);
+
+            const profile = await fetchProfile();
+
+            setUser({
+                uid: profile.uid,
+                username: profile.username,
+                role: profile.role
+            });
+
+            setBalance(profile.balance);
+
+            navigate('/');
+        } catch (err) {
+            console.error(err);
+            setError("Failed to log in.");
+        }
+    };
     
     return (
         <div className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-slate-950 via-slate-900 to-black px-6">
 
-            {/* Glow Backgrounds (Same style as Register) */}
+            {/* Glow Backgrounds */}
             <div className="absolute w-[80vw] h-[80vw] max-w-[1000px] max-h-[1000px] bg-indigo-700 rounded-full blur-[180px] opacity-20 -top-1/3 -left-1/3"></div>
-            
             <div className="absolute w-[70vw] h-[70vw] max-w-[900px] max-h-[900px] bg-purple-700 rounded-full blur-[180px] opacity-20 -bottom-1/3 -right-1/3"></div>
-
             <div className="absolute w-[60vw] h-[60vw] max-w-[800px] max-h-[800px] bg-pink-600 rounded-full blur-[200px] opacity-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></div>
 
             <motion.div
@@ -31,7 +62,16 @@ const Login: React.FC = () => {
                     </h1>
                 </div>
 
-                <form className="space-y-7">
+                {/* Added onSubmit handler here */}
+                <form className="space-y-7" onSubmit={handleLogin}>
+                    
+                    {/* Error message display */}
+                    {error && (
+                        <div className="text-red-400 text-sm text-center bg-red-400/10 p-2 rounded-lg border border-red-400/20">
+                            {error}
+                        </div>
+                    )}
+
                     <div className="space-y-2">
                         <label className="block text-sm text-gray-300">
                             Email
@@ -39,6 +79,9 @@ const Login: React.FC = () => {
                         <input
                             type="email"
                             placeholder="you@example.com"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
                             className="w-full px-5 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition duration-300"
                         />
                     </div>
@@ -50,6 +93,9 @@ const Login: React.FC = () => {
                         <input
                             type="password"
                             placeholder="••••••••"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
                             className="w-full px-5 py-3 rounded-xl bg-white/20 border border-white/30 text-white placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-transparent transition duration-300"
                         />
                     </div>

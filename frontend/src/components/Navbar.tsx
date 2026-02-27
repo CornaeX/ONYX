@@ -5,7 +5,8 @@ import WinnerPanel from './WinnerPanel';
 import { useNavigate } from "react-router-dom";
 
 export const Navbar = () => {
-  const { user, balance } = useStore();
+  const user = useStore((state) => state.user);
+  const balance = useStore((state) => state.balance);
   const navigate = useNavigate();
 
   return (
@@ -57,13 +58,24 @@ export const Navbar = () => {
                   Wallet
                 </button>
                 <div className="flex flex-col items-end">
-                   <span className="text-[10px] text-gray-500 font-bold uppercase">Balance</span>
-                   <span className="text-white font-mono font-bold leading-none">${balance.toLocaleString()}</span>
+                  <span className="text-[10px] text-gray-500 font-bold uppercase">
+                    {user.role}
+                  </span>
+                  <span className="text-white font-mono font-bold leading-none">
+                    ${balance.toLocaleString()}
+                  </span>
                 </div>
               </div>
-              <button className="w-10 h-10 rounded-xl bg-[#121E36] border border-[#1E2D4A] flex items-center justify-center">
+
+              <div className="flex flex-col items-end mr-2">
+                <span className="text-xs text-gray-400">
+                  {user.username}
+                </span>
+              </div>
+
+              <div className="w-10 h-10 rounded-xl bg-[#121E36] border border-[#1E2D4A] flex items-center justify-center">
                 <User className="w-5 h-5 text-gray-400" />
-              </button>
+              </div>
             </>
           ) : (
             <div className="flex gap-3">
