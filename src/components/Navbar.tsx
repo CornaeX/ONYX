@@ -2,13 +2,15 @@ import React from 'react';
 import { Search, Gift, User } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import WinnerPanel from './WinnerPanel';
+import { useNavigate } from "react-router-dom";
 
 export const Navbar = () => {
   const { user, balance } = useStore();
+  const navigate = useNavigate();
 
   return (
     // Removed border-b and border-[#1E2D4A] from this wrapper
-    <nav className="h-full flex items-center justify-between px-6 w-full bg-transparent">
+    <nav className="h-20 flex items-center justify-between px-6 w-full">
       
       {/* LEFT ZONE: Fixed Width */}
       <div className="flex items-center gap-4">
@@ -65,8 +67,13 @@ export const Navbar = () => {
             </>
           ) : (
             <div className="flex gap-3">
-              <button className="text-gray-400 hover:text-white font-bold text-sm px-2">Sign In</button>
-              <button className="bg-[#007AFF] text-white px-6 py-2.5 rounded-xl font-bold text-sm">
+              <button 
+              onClick={() => navigate("/login")}
+              className="text-gray-400 hover:text-white font-bold text-sm px-2">Sign In</button>
+              
+              <button 
+              onClick={() => navigate("/register")}
+              className="bg-[#007AFF] text-white px-6 py-2.5 rounded-xl font-bold text-sm">
                 Register
               </button>
             </div>

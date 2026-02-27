@@ -1,13 +1,10 @@
 import React from 'react';
+import { Outlet } from 'react-router-dom'; // Import this
 import { Sidebar } from './Sidebar';
 import { Navbar } from './Navbar';
-import { Footer } from './Footer'; // 1. Import the Footer
+import { Footer } from './Footer';
 
-interface LayoutProps {
-  children: React.ReactNode;
-}
-
-export const Layout = ({ children }: LayoutProps) => {
+export const Layout = () => {
   return (
     <div className="flex min-h-screen bg-[#040B1C] text-white font-sans selection:bg-blue-500/30">
       
@@ -26,15 +23,11 @@ export const Layout = ({ children }: LayoutProps) => {
 
         {/* Content + Footer */}
         <main className="flex-1 overflow-y-auto scroll-smooth">
-          
-          {/* Main Content Area */}
           <div className="p-6 lg:p-8 max-w-[1600px] mx-auto min-h-[calc(100vh-300px)]">
-             {children}
+             {/* THE MAGIC HAPPENS HERE: Outlet renders the child route */}
+             <Outlet /> 
           </div>
-
-          {/* 2. Add Footer Here (At the bottom of scroll) */}
           <Footer />
-          
         </main>
         
       </div>

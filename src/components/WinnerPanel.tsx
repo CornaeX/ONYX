@@ -19,7 +19,7 @@ const WinnerPanel = () => {
     }
     
     // 1. Get the exact random number
-    const rawPrize = Math.floor(Math.random() * (5000 - 50 + 1)) + 500;
+    const rawPrize = Math.floor(Math.random() * (2000 - 50 + 1)) + 500;
     // 2. Get the rounded version
     const roundedPrize = Math.floor(rawPrize / 100) * 100;
     

@@ -42,7 +42,8 @@ const PlayingCard = ({ card, hidden }: { card: CardType; hidden: boolean }) => {
   const [mounted, setMounted] = useState(false);
   
   useEffect(() => {
-    const timer = setTimeout(() => setMounted(true), 10);
+    // 👇 CHANGED: Increased from 10ms to 50ms so the browser doesn't skip the animation
+    const timer = setTimeout(() => setMounted(true), 50);
     return () => clearTimeout(timer);
   }, []);
 
@@ -51,7 +52,7 @@ const PlayingCard = ({ card, hidden }: { card: CardType; hidden: boolean }) => {
     transform: mounted 
       ? 'translate(0px, 0px) rotate(0deg) scale(1)' 
       : 'translate(400px, -400px) rotate(180deg) scale(0.3)',
-    transition: `all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)`
+    transition: `all 0.7s cubic-bezier(0.175, 0.885, 0.32, 1.275)`
   };
 
   if (hidden) {
@@ -66,13 +67,13 @@ const PlayingCard = ({ card, hidden }: { card: CardType; hidden: boolean }) => {
   
   return (
     <div style={style} className="relative w-24 h-36 bg-white rounded-xl border-2 border-gray-300 shadow-2xl flex items-center justify-center">
-      <div className={`absolute top-2 right-2 text-xl font-bold leading-none ${isRed ? 'text-red-600' : 'text-black'}`}>
+      <div className={`absolute top-2 left-2 text-xl font-bold leading-none ${isRed ? 'text-red-600' : 'text-black'}`}>
         {card.value}
       </div>
       <div className={`text-6xl ${isRed ? 'text-red-600' : 'text-black'}`}>
         {card.suit}
       </div>
-      <div className={`absolute bottom-2 left-2 text-xl font-bold leading-none rotate-180 ${isRed ? 'text-red-600' : 'text-black'}`}>
+      <div className={`absolute bottom-2 right-2 text-xl font-bold leading-none rotate-180 ${isRed ? 'text-red-600' : 'text-black'}`}>
         {card.value}
       </div>
     </div>
@@ -84,7 +85,6 @@ export function Game() {
   const [balance, setBalance] = useState<number>(1150);
   const [currentBet, setCurrentBet] = useState<number>(0);
   
-  // Added TypeScript generics here
   const [deck, setDeck] = useState<CardType[]>([]);
   const [playerHand, setPlayerHand] = useState<CardType[]>([]);
   const [dealerHand, setDealerHand] = useState<CardType[]>([]);
@@ -119,7 +119,6 @@ export function Game() {
 
     const newDeck = getNewDeck();
     
-    // Added '!' to tell TypeScript these won't be undefined (since we just made a 52 card deck)
     const p1 = newDeck.pop()!;
     const d1 = newDeck.pop()!;
     const p2 = newDeck.pop()!;
@@ -127,9 +126,10 @@ export function Game() {
     
     setDeck(newDeck);
 
-    setTimeout(() => setPlayerHand([p1]), 400);
-    setTimeout(() => setDealerHand([d1]), 800);
-    setTimeout(() => setPlayerHand([p1, p2]), 1200);
+    // 👇 CHANGED: Spaced out the dealing timeouts to match the slower animation
+    setTimeout(() => setPlayerHand([p1]), 600);
+    setTimeout(() => setDealerHand([d1]), 1200);
+    setTimeout(() => setPlayerHand([p1, p2]), 1800);
     setTimeout(() => {
       setDealerHand([d1, d2]);
       
@@ -141,12 +141,12 @@ export function Game() {
       else if (dScore === 21) handleGameOver('Dealer Blackjack.', 'lose');
       else setGameState('playerTurn');
 
-    }, 1600);
+    }, 2400); // Wait until the last card finishes before opening controls
   };
 
   const hit = () => {
     const newCard = deck.pop();
-    if (!newCard) return; // Safety check for TypeScript
+    if (!newCard) return; 
     
     const newHand = [...playerHand, newCard];
     setPlayerHand(newHand);
@@ -175,10 +175,11 @@ export function Game() {
       if (dScore < 17) {
         const timer = setTimeout(() => {
           const nextCard = deck.pop();
-          if (nextCard) { // Safety check for TypeScript
+          if (nextCard) { 
             setDealerHand(prev => [...prev, nextCard]);
           }
-        }, 1000); 
+        // 👇 CHANGED: Slowed down the dealer's hits too for suspense!
+        }, 1500); 
         return () => clearTimeout(timer);
       } else {
         const pScore = calculateScore(playerHand);
@@ -223,7 +224,8 @@ export function Game() {
               {gameState !== 'dealing' && <h3 className="text-gray-500 font-bold tracking-widest text-xs mb-3">DEALER {gameState === 'gameOver' && `- ${dealerScore}`}</h3>}
               <div className="flex justify-center -space-x-12">
                 {dealerHand.map((card, i) => (
-                  <PlayingCard key={i} card={card} hidden={gameState !== 'gameOver' && i === 0} />
+                  // 👇 CHANGED: Better key for React animations
+                  <PlayingCard key={`${card.suit}-${card.value}-${i}`} card={card} hidden={gameState !== 'gameOver' && i === 0} />
                 ))}
               </div>
             </div>
@@ -241,7 +243,8 @@ export function Game() {
             <div className="text-center relative min-h-[160px]">
               <div className="flex justify-center -space-x-12 mb-3">
                 {playerHand.map((card, i) => (
-                  <PlayingCard key={i} card={card} hidden={false} />
+                  // 👇 CHANGED: Better key for React animations
+                  <PlayingCard key={`${card.suit}-${card.value}-${i}`} card={card} hidden={false} />
                 ))}
               </div>
               {gameState !== 'dealing' && playerHand.length > 0 && <h3 className="text-blue-400 font-bold tracking-widest text-xs">YOUR SCORE: {playerScore}</h3>}
