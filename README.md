@@ -1,6 +1,9 @@
 ## 📂 Project Structure
 
 ```bash
+## Backend Architecture Diagram
+
+```mermaid
 📁 frontend/
 ├── 📁 public/
 │   ├── 🖼️ noise.png
