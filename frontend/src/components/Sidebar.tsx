@@ -11,6 +11,11 @@ import { useStore } from "../store/useStore";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebase/firebase";
 
+import cloveImg from "../assets/images/sidebar-clove.jpg";
+import coinImg from "../assets/images/sidebar-coin.jpg";
+import diceImg from "../assets/images/sidebar-dice.jpg";
+import rocketImg from "../assets/images/sidebar-rocket.jpg";
+
 export const Sidebar = () => {
   const [isCasinoOpen, setIsCasinoOpen] = useState(true);
   const { user, logout } = useStore();
@@ -54,15 +59,20 @@ export const Sidebar = () => {
       <div className="px-4 mt-2 mb-6">
         <div className="flex justify-center gap-2">
           {[
-            { icon: <Bomb size={20} className="text-gray-300" />, color: 'from-gray-700/50' },
-            { icon: <Rocket size={20} className="text-red-400" />, color: 'from-red-900/50' },
-            { icon: <Globe size={20} className="text-pink-400" />, color: 'from-purple-900/50' },
-            { icon: <Coins size={20} className="text-yellow-400" />, color: 'from-yellow-700/50' }
+            { img: coinImg },
+            { img: diceImg },
+            { img: rocketImg },
+            { img: cloveImg }
           ].map((item, i) => (
-            <div key={i} className={`w-12 h-12 rounded-xl bg-gradient-to-b ${item.color} to-[#0a162e] border border-white/10 flex items-center justify-center shadow-lg cursor-pointer hover:-translate-y-1 transition-transform group`}>
-               <div className="group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.3)] transition-all">
-                 {item.icon}
-               </div>
+            <div
+              key={i}
+              className="w-14 h-14 rounded-xl overflow-hidden border border-white/10 cursor-pointer transition-transform hover:scale-105"
+            >
+              <img
+                src={item.img}
+                alt="quick-icon"
+                className="w-full h-full object-cover"
+              />
             </div>
           ))}
         </div>

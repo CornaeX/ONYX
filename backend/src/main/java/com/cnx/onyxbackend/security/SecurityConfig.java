@@ -27,10 +27,11 @@ public class SecurityConfig {
             .cors(cors -> {})   // 🔥 THIS LINE WAS MISSING
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(auth -> auth
-                    .requestMatchers("/api/auth/**").permitAll()
-                    .requestMatchers("/api/admin/**").hasRole("ADMIN")
-                    .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN")
-                    .anyRequest().authenticated()
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/user/**").hasAnyRole("USER", "ADMIN")
+                .requestMatchers("/api/blackjack/**").hasAnyRole("USER", "ADMIN")  // 🔥 ADD THIS
+                .anyRequest().authenticated()
             )
             .addFilterBefore(firebaseFilter, UsernamePasswordAuthenticationFilter.class);
 
@@ -42,6 +43,7 @@ public class SecurityConfig {
         CorsConfiguration configuration = new CorsConfiguration();
 
         configuration.setAllowCredentials(true);
+        configuration.addAllowedOriginPattern("*");
         configuration.addAllowedOrigin("http://localhost:5173");
         configuration.addAllowedHeader("*");
         configuration.addAllowedMethod("*");

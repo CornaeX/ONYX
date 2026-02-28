@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useStore } from "../../../store/useStore";
 import { PlayingCard, type CardType } from './PlayingCard';
 import placeBetSFX from '../../../assets/sounds/betplace.mp3';
 import cardSwipeSFX from '../../../assets/sounds/cardswipe.mp3';
@@ -38,9 +39,12 @@ const calculateScore = (hand: CardType[]): number => {
 
 // --- Main Game Component ---
 export function Blackjack() {
-  const [balance, setBalance] = useState<number>(1150);
+  // Global State Integration
+  const balance = useStore((state) => state.balance);
+  const setBalance = useStore((state) => state.setBalance);
+
+  // Local Game State
   const [currentBet, setCurrentBet] = useState<number>(0);
-  
   const [deck, setDeck] = useState<CardType[]>([]);
   const [playerHand, setPlayerHand] = useState<CardType[]>([]);
   const [dealerHand, setDealerHand] = useState<CardType[]>([]);
@@ -51,22 +55,42 @@ export function Blackjack() {
   const [gameState, setGameState] = useState<string>('betting'); 
   const [message, setMessage] = useState<string>('');
 
-  const playSound = (soundFile: string) => {
-    const audio = new Audio(soundFile); 
+  // Optimized Sound System
+  const sounds = useMemo(() => ({
+    bet: new Audio(placeBetSFX),
+    swipe: new Audio(cardSwipeSFX),
+    clear: new Audio(clearBetSFX),
+    win: new Audio(winSFX),
+    lose: new Audio(loseSFX),
+  }), []);
+
+  const playSound = (type: keyof typeof sounds) => {
+    const audio = sounds[type];
+    audio.currentTime = 0;
     audio.play().catch(error => console.log('Audio playback prevented:', error));
   };
 
+  // Safe Draw Helper
+  const drawCard = (): CardType | null => {
+    if (deck.length === 0) return null;
+    const newDeck = [...deck];
+    const card = newDeck.pop()!;
+    setDeck(newDeck);
+    return card;
+  };
+
+  // --- Betting Actions ---
   const addBet = (amount: number) => {
     if (balance >= amount) {
-      setBalance(prev => prev - amount);
+      setBalance(balance - amount);
       setCurrentBet(prev => prev + amount);
-      playSound(placeBetSFX);
+      playSound('bet');
     }
   };
 
   const clearBet = () => {
-    setBalance(prev => prev + currentBet);
-    playSound(clearBetSFX);
+    setBalance(balance + currentBet);
+    playSound('clear');
     setCurrentBet(0);
   };
 
@@ -74,10 +98,11 @@ export function Blackjack() {
     if (balance > 0) { 
       setCurrentBet(prev => prev + balance);
       setBalance(0);
-      playSound(placeBetSFX);
+      playSound('bet');
     }
   };
 
+  // --- Game Flow ---
   const startRound = () => {
     if (currentBet === 0) return;
 
@@ -97,12 +122,12 @@ export function Blackjack() {
     
     setDeck(newDeck);
 
-    setTimeout(() => { setPlayerHand([p1]); playSound(cardSwipeSFX); }, 600);
-    setTimeout(() => { setDealerHand([d1]); playSound(cardSwipeSFX); }, 1200);
-    setTimeout(() => { setPlayerHand([p1, p2]); playSound(cardSwipeSFX); }, 1800);
+    setTimeout(() => { setPlayerHand([p1]); playSound('swipe'); }, 600);
+    setTimeout(() => { setDealerHand([d1]); playSound('swipe'); }, 1200);
+    setTimeout(() => { setPlayerHand([p1, p2]); playSound('swipe'); }, 1800);
     setTimeout(() => {
       setDealerHand([d1, d2]);
-      playSound(cardSwipeSFX); 
+      playSound('swipe'); 
       
       setTimeout(() => {
         const pScore = calculateScore([p1, p2]);
@@ -118,9 +143,9 @@ export function Blackjack() {
   };
 
   const hit = () => {
-    const newCard = deck.pop();
+    const newCard = drawCard();
     if (!newCard) return; 
-    playSound(cardSwipeSFX);
+    playSound('swipe');
 
     if (activeHand === 0) {
       const newHand = [...playerHand, newCard];
@@ -150,16 +175,16 @@ export function Blackjack() {
 
   const doubleDown = () => {
     if (balance < currentBet) return;
-    setBalance(prev => prev - currentBet);
+    setBalance(balance - currentBet);
     setCurrentBet(prev => prev * 2);
-    playSound(placeBetSFX);
+    playSound('bet');
     
-    const newCard = deck.pop();
+    const newCard = drawCard();
     if (!newCard) return; 
     
     const newHand = [...playerHand, newCard];
     setPlayerHand(newHand);
-    playSound(cardSwipeSFX);
+    playSound('swipe');
 
     setTimeout(() => {
       if (calculateScore(newHand) > 21) handleGameOver('Bust! Over 21.', 0);
@@ -169,8 +194,8 @@ export function Blackjack() {
 
   const split = () => {
     if (balance < currentBet) return;
-    setBalance(prev => prev - currentBet);
-    playSound(placeBetSFX);
+    setBalance(balance - currentBet);
+    playSound('bet');
     
     setPlayerHand([playerHand[0]]);
     setSplitHand([playerHand[1]]);
@@ -180,11 +205,12 @@ export function Blackjack() {
     setGameState('gameOver');
     setMessage(msg);
     
-    if (payout > currentBet) playSound(winSFX);
-    else if (payout > 0) playSound(cardSwipeSFX); 
-    else playSound(loseSFX);
+    if (payout > currentBet) playSound('win');
+    else if (payout > 0) playSound('swipe'); 
+    else playSound('lose');
     
-    setBalance(prev => prev + payout);
+    // Fallback wrapper for setBalance to handle raw numbers or updaters
+    setBalance((typeof balance === 'number' ? balance : 0) + payout);
   };
 
   useEffect(() => {
@@ -192,16 +218,15 @@ export function Blackjack() {
       const dScore = calculateScore(dealerHand);
       if (dScore < 17) {
         const timer = setTimeout(() => {
-          const nextCard = deck.pop();
+          const nextCard = drawCard();
           if (nextCard) { 
             setDealerHand(prev => [...prev, nextCard]);
-            playSound(cardSwipeSFX);
+            playSound('swipe');
           }
         }, 1500); 
         return () => clearTimeout(timer);
       } else {
         const resultTimer = setTimeout(() => {
-          
           let totalPayout = 0;
           let finalMsg = '';
 
@@ -231,17 +256,18 @@ export function Blackjack() {
         return () => clearTimeout(resultTimer);
       }
     }
-  }, [gameState, dealerHand, deck, playerHand, splitHand]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gameState, dealerHand, splitHand, playerHand]);
 
-  // 👇 CHANGED: Calculate visible dealer score (ignoring hole card when it's hidden)
   const hideDealerCard = gameState === 'dealing' || gameState === 'playerTurn';
   const visibleDealerScore = hideDealerCard && dealerHand.length > 0 
-    ? calculateScore(dealerHand.slice(1)) // Only count cards from index 1 onward
-    : calculateScore(dealerHand);         // Count everything
+    ? calculateScore(dealerHand.slice(1))
+    : calculateScore(dealerHand);
 
   const canDouble = playerHand.length === 2 && splitHand.length === 0 && balance >= currentBet;
   const canSplit = playerHand.length === 2 && splitHand.length === 0 && balance >= currentBet && calculateScore([playerHand[0]]) === calculateScore([playerHand[1]]);
 
+  // --- UI Render ---
   return (
     <div className="flex flex-col items-center justify-between h-[650px] w-full max-w-4xl mx-auto bg-[#070E20] rounded-2xl border border-gray-800 p-8 shadow-2xl relative overflow-hidden font-sans text-white">
       
@@ -249,10 +275,10 @@ export function Blackjack() {
 
       {/* TOP BAR */}
       <div className="w-full flex justify-between items-center z-10 border-b border-gray-800 pb-4">
-        <div className="text-gray-400 font-bold">Bankroll: <span className="text-green-400 text-xl ml-2">${balance.toFixed(2)}</span></div>
+        <div className="text-gray-400 font-bold">Bankroll: <span className="text-green-400 text-xl ml-2">${(balance || 0).toFixed(2)}</span></div>
         <div className="text-gray-400 font-bold">
-          {splitHand.length > 0 ? "Total Bet:" : "Current Bet:"} 
-          <span className="text-yellow-400 text-xl ml-2">${(currentBet * (splitHand.length > 0 ? 2 : 1)).toFixed(2)}</span>
+         {splitHand.length > 0 ? "Total Bet:" : "Current Bet:"} 
+         <span className="text-yellow-400 text-xl ml-2">${(currentBet * (splitHand.length > 0 ? 2 : 1)).toFixed(2)}</span>
         </div>
       </div>
 

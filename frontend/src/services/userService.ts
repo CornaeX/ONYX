@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:8080/api/user";
+const API_URL = "https://onyxbackend.share.zrok.io/api/user";
 
 export const fetchProfile = async () => {
   const token = localStorage.getItem("token");

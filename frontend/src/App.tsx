@@ -1,5 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
-import { Layout } from './components/Layout';
+import { Layout, BankLayout } from './components/Layout';
 import { AuthLayout } from './components/AuthLayout';
 import { useEffect } from 'react';
 import { useStore } from './store/useStore';
@@ -12,6 +12,8 @@ import { Blackjack } from './pages/games/blackjack/Blackjack';
 // 2. These are DEFAULT exports (Remove the curly braces)
 import Login from './pages/Login';
 import Register from './pages/Register';
+
+import BankPage from './pages/Bank';
 
 function App() {
 
@@ -54,6 +56,10 @@ function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/blackjack" element={<Blackjack />} />
+      </Route>
+
+      <Route element={<BankLayout />}>
+        <Route path="/Bank" element={<BankPage />} />
       </Route>
 
       {/* Catch-all */}

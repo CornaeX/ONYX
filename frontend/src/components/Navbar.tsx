@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Search, Gift, User } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import WinnerPanel from './WinnerPanel';
@@ -8,6 +8,7 @@ export const Navbar = () => {
   const user = useStore((state) => state.user);
   const balance = useStore((state) => state.balance);
   const navigate = useNavigate();
+  const [showUsername, setShowUsername] = useState(true);
 
   return (
     // Removed border-b and border-[#1E2D4A] from this wrapper
@@ -34,15 +35,18 @@ export const Navbar = () => {
       {/* RIGHT ZONE: Fixed Width, Content Aligned Right */}
       <div className="flex items-center justify-end w-[450px]">
         {/* Rakeback Section */}
-        <div className="hidden xl:flex items-center gap-3 mr-6">
+        <div className="flex items-center gap-3 mr-3 md:mr-6">
           <div className="flex flex-col items-end">
-            <span className="text-[10px] font-bold text-[#00D166] uppercase tracking-wider">Rakeback</span>
-            <div className="w-24 h-1.5 bg-[#121E36] rounded-full overflow-hidden">
+            <span className="text-[10px] font-bold text-[#00D166] uppercase tracking-wider">
+              Rakeback
+            </span>
+            <div className="w-16 md:w-24 h-1.5 bg-[#121E36] rounded-full overflow-hidden">
               <div className="h-full w-[65%] bg-gradient-to-r from-[#00D166] to-[#00FFA3]"></div>
             </div>
           </div>
-          <button className="bg-[#121E36] hover:bg-[#1E2D4A] p-2.5 rounded-xl border border-[#1E2D4A] relative">
-            <Gift className="w-5 h-5 text-purple-400" />
+
+          <button className="bg-[#121E36] hover:bg-[#1E2D4A] p-2 rounded-xl border border-[#1E2D4A] relative">
+            <Gift className="w-4 h-4 md:w-5 md:h-5 text-purple-400" />
             <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
           </button>
         </div>
@@ -54,7 +58,9 @@ export const Navbar = () => {
           {user ? (
             <>
               <div className="flex items-center bg-[#0B1426] border border-[#1E2D4A] rounded-xl p-1 pr-4">
-                <button className="bg-[#007AFF] hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all mr-3">
+                <button 
+                  onClick={() => navigate("/Bank")}
+                  className="bg-[#007AFF] hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all mr-3">
                   Wallet
                 </button>
                 <div className="flex flex-col items-end">
@@ -67,15 +73,20 @@ export const Navbar = () => {
                 </div>
               </div>
 
-              <div className="flex flex-col items-end mr-2">
-                <span className="text-xs text-gray-400">
-                  {user.username}
-                </span>
-              </div>
+              {showUsername && (
+                <div className="flex flex-col items-end mr-2 animate-fadeIn">
+                  <span className="text-xs text-gray-400">
+                    {user.username}
+                  </span>
+                </div>
+              )}
 
-              <div className="w-10 h-10 rounded-xl bg-[#121E36] border border-[#1E2D4A] flex items-center justify-center">
+              <button
+                onClick={() => setShowUsername(!showUsername)}
+                className="w-10 h-10 rounded-xl bg-[#121E36] border border-[#1E2D4A] flex items-center justify-center hover:bg-[#1E2D4A] transition"
+              >
                 <User className="w-5 h-5 text-gray-400" />
-              </div>
+              </button>
             </>
           ) : (
             <div className="flex gap-3">

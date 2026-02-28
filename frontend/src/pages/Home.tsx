@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { Search, Filter } from 'lucide-react'; // Removed Chevron imports
+import { useNavigate } from "react-router-dom";
+
+import dailySpinGif from "../assets/gifs/daily-spin.gif";
 
 export const Home = () => {
   const [activeTab, setActiveTab] = useState('All Games');
   const categories = ['All Games', 'Table Games', 'Slots', 'EarnBet', 'Lottery', 'Crash'];
+  const navigate = useNavigate();
 
   // Mock array to simulate "Show All" vs "Carousel" view
   const displayedItems = activeTab === 'All Games' 
@@ -20,17 +24,24 @@ export const Home = () => {
           <div className="absolute inset-0 flex items-center justify-center text-blue-200/20 text-4xl font-bold text-center">
             PLACE IMAGE HERE <br/> (Bonus Banner)
           </div>
-          <div className="absolute bottom-6 left-6">
-            <h3 className="text-2xl font-bold mb-2">100% Bonus</h3>
-            <button className="bg-white text-blue-900 px-6 py-2 rounded-lg font-bold">Deposit</button>
-          </div>
         </div>
 
         {/* Banner 2: Middle */}
-        <div className="h-64 rounded-2xl bg-gradient-to-br from-yellow-700 to-yellow-500 relative overflow-hidden group cursor-pointer border border-yellow-500/30">
-          <div className="absolute inset-0 flex items-center justify-center text-yellow-200/20 text-4xl font-bold text-center">
-             PLACE IMAGE HERE <br/> (Daily Free Spin)
-          </div>
+        <div className="h-64 rounded-3xl relative overflow-hidden group cursor-pointer transition-all duration-500 hover:shadow-[0_0_30px_rgba(255,215,0,0.4)]">
+          
+          {/* GIF Background */}
+          <img
+            src={dailySpinGif}
+            alt="Daily Free Spin"
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+          />
+
+          {/* Soft Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent opacity-80 group-hover:opacity-60 transition-all duration-500" />
+
+          {/* Glass Shine Effect */}
+          <div className="absolute inset-0 bg-white/5 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-all duration-500" />
+
         </div>
 
         {/* Banner 3: Right */}
