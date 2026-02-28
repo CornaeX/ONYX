@@ -1,3 +1,6 @@
+## 📂 Project Structure
+
+```bash
 📁 frontend/
 ├── 📁 public/
 │   ├── 🖼️ noise.png
@@ -59,9 +62,9 @@
 ├── ⚙️ tsconfig.json
 ├── ⚙️ tsconfig.node.json
 └── 📄 vite.config.ts
+```
 
-------------------------------------------------
-
+```bash
 📁 backend
 ├── 📁 .mvn/
 │   └── 📁 wrapper/
@@ -111,6 +114,7 @@
 ├── 📄 mvnw
 ├── 📄 mvnw.cmd
 └── ⚙️ pom.xml
+```
 
 ## Backend Architecture Diagram
 
