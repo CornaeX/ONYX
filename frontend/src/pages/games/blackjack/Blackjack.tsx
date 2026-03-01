@@ -91,9 +91,12 @@ export function Blackjack() {
   };
 
   const allIn = () => {
-    if (balance > 0) { 
-      setCurrentBet(prev => prev + balance);
-      setBalance(0);
+    // Grab only the whole dollars (e.g., 25.75 becomes 25)
+    const allInAmount = Math.floor(balance); 
+
+    if (allInAmount > 0) { 
+      setCurrentBet(prev => prev + allInAmount);
+      setBalance(balance - allInAmount); // This leaves the cents in the balance
       playSound('bet');
     }
   };
@@ -370,7 +373,13 @@ export function Blackjack() {
             <div className="flex gap-4 w-full justify-center">
               <button onClick={clearBet} disabled={currentBet === 0} className="px-6 py-2 rounded border border-red-900/50 hover:bg-red-900/30 text-gray-400 hover:text-red-400 font-bold transition-colors">Clear</button>
               <button onClick={startRound} disabled={currentBet === 0} className="px-10 py-2 rounded bg-green-600 hover:bg-green-500 text-white font-bold transition-colors disabled:opacity-50">DEAL</button>
-              <button onClick={allIn} disabled={balance === 0} className="px-6 py-2 rounded border border-yellow-900/50 hover:bg-yellow-900/30 text-gray-400 hover:text-yellow-400 font-bold transition-colors">All In</button>
+              <button 
+                onClick={allIn} 
+                disabled={balance < 1} // 🔥 Changed this so they need at least $1 to go all in
+                className="px-6 py-2 rounded border border-yellow-900/50 hover:bg-yellow-900/30 text-gray-400 hover:text-yellow-400 font-bold transition-colors"
+              >
+                All In
+              </button>
             </div>
           </div>
         ) : gameState === 'dealing' ? (

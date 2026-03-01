@@ -510,22 +510,29 @@ public class BlackjackService {
 
             double rakeAvailable = rakeAvailableObj != null ? rakeAvailableObj : 0.0;
 
-            if (rakeAvailable <= 0) {
-                throw new RuntimeException("No rakeback available");
+            // 🔥 1. Calculate the whole dollars to claim, and the cents to leave behind
+            double amountToClaim = Math.floor(rakeAvailable); // e.g., 5.75 becomes 5.0
+            double leftoverCents = rakeAvailable - amountToClaim; // e.g., 5.75 - 5.0 becomes 0.75
+
+            // 🔥 2. Check if they have at least 1 full dollar to claim
+            if (amountToClaim < 1.0) {
+                throw new RuntimeException("You need at least $1.00 to claim rakeback.");
             }
 
             double rakeClaimed = rakeClaimedObj != null ? rakeClaimedObj : 0.0;
             double balance = walletDoc.getDouble("balance");
 
-            transaction.update(walletRef, "balance", balance + rakeAvailable);
+            // 🔥 3. Only add the whole dollars to the wallet balance
+            transaction.update(walletRef, "balance", balance + amountToClaim);
 
+            // 🔥 4. Update the database: Leave the cents, add dollars to the total claimed
             transaction.update(userRef, Map.of(
-                    "rakebackAvailable", 0,
-                    "rakebackClaimed", rakeClaimed + rakeAvailable
+                    "rakebackAvailable", leftoverCents,
+                    "rakebackClaimed", rakeClaimed + amountToClaim
             ));
 
             Map<String, Object> result = new HashMap<>();
-            result.put("claimed", rakeAvailable);
+            result.put("claimed", amountToClaim);
 
             return result;
 

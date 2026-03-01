@@ -39,13 +39,15 @@ public class UserController {
 
         DocumentSnapshot walletDoc = db.collection("wallets").document(walletId).get().get();
 
-        Long balance = walletDoc.getLong("balance");
+        // 🔥 FIX: Use getDouble() instead of getLong() so the cents aren't deleted!
+        Double balanceObj = walletDoc.getDouble("balance");
+        double balance = balanceObj != null ? balanceObj : 0.0;
 
         Map<String, Object> response = new HashMap<>();
         response.put("uid", uid);
         response.put("username", username);
         response.put("role", role);
-        response.put("balance", balance);
+        response.put("balance", balance); // Now this sends 15.85 instead of just 15
         response.put("rakeback", rakebackAvailable);
 
         return response;
