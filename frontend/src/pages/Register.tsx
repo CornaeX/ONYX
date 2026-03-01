@@ -10,7 +10,7 @@ const Register: React.FC = () => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [error, setError] = useState(''); // Added to handle errors
-    const { setUser, setBalance } = useStore();
+    const { setUser, setBalance, setRakeback } = useStore();
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -22,13 +22,9 @@ const Register: React.FC = () => {
         }
 
         try {
-            // 1️⃣ Register in Firebase + backend
             await registerUser(email, password);
-
-            // 2️⃣ Fetch profile from backend
             const profile = await fetchProfile();
 
-            // 3️⃣ Save to Zustand
             setUser({
                 uid: profile.uid,
                 username: profile.username,
@@ -36,8 +32,10 @@ const Register: React.FC = () => {
             });
 
             setBalance(profile.balance);
+            
+            // 2. ADD THIS LINE
+            setRakeback(profile.rakeback);
 
-            // 4️⃣ Navigate
             navigate('/');
 
         } catch (err) {

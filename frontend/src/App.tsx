@@ -16,8 +16,8 @@ import Register from './pages/Register';
 import BankPage from './pages/Bank';
 
 function App() {
-
-  const { setUser, setBalance, logout } = useStore();
+  // 1. ADD setRakeback HERE
+  const { setUser, setBalance, setRakeback, logout } = useStore();
 
   useEffect(() => {
     const loadUser = async () => {
@@ -34,6 +34,9 @@ function App() {
         });
 
         setBalance(profile.balance);
+        
+        // 2. ADD THIS LINE TO SAVE RAKEBACK ON PAGE REFRESH
+        setRakeback(profile.rakeback);
 
       } catch (err) {
         console.error("Session expired:", err);
@@ -42,7 +45,7 @@ function App() {
     };
 
     loadUser();
-  }, [setUser, setBalance, logout]);
+  }, [setUser, setBalance, setRakeback, logout]); // 3. Add setRakeback to dependency array
 
   return (
     <Routes>

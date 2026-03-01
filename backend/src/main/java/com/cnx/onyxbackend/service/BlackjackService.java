@@ -1,21 +1,19 @@
 package com.cnx.onyxbackend.service;
 
-import java.util.Map;
-
-import org.springframework.stereotype.Service;
-
-import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.DocumentSnapshot;
-import com.google.cloud.firestore.FieldValue;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+
+import org.springframework.stereotype.Service;
 
 import com.cnx.onyxbackend.model.GameStatus;
 import com.cnx.onyxbackend.util.DeckUtil;
+import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.FieldValue;
+import com.google.cloud.firestore.Firestore;
 
 
 @Service
@@ -33,6 +31,16 @@ public class BlackjackService {
 
             DocumentReference userRef = db.collection("users").document(uid);
             DocumentSnapshot userDoc = transaction.get(userRef).get();
+
+            Double totalWageredObj = userDoc.getDouble("totalWagered");
+            Double rakeAvailableObj = userDoc.getDouble("rakebackAvailable");
+            Double rakeRateObj = userDoc.getDouble("rakebackRate");
+
+            double totalWagered = totalWageredObj != null ? totalWageredObj : 0.0;
+            double rakeAvailable = rakeAvailableObj != null ? rakeAvailableObj : 0.0;
+            double rakeRate = rakeRateObj != null ? rakeRateObj : 0.01;
+
+            double rakeEarned = bet * rakeRate;
 
             if (!userDoc.exists()) {
                 throw new RuntimeException("User not found");
@@ -64,6 +72,12 @@ public class BlackjackService {
 
             // Deduct bet
             transaction.update(walletRef, "balance", balance - bet);
+
+            // Update rake tracking
+            transaction.update(userRef, Map.of(
+                "totalWagered", totalWagered + bet,
+                "rakebackAvailable", rakeAvailable + rakeEarned
+            ));
 
             // Generate deck
             List<String> deck = DeckUtil.generateShuffledDeck();
@@ -201,30 +215,39 @@ public class BlackjackService {
                 throw new RuntimeException("Unauthorized");
             }
 
+            List<Map<String, Object>> hands = (List<Map<String, Object>>) gameDoc.get("playerHands");
+            int activeHandIndex = gameDoc.get("activeHandIndex") != null ? ((Long) gameDoc.get("activeHandIndex")).intValue() : 0;
+
+            // ---- HANDLE SPLIT STANDS FIRST ----
+            // If they stand, but there is another hand (like after a split), advance to the next hand instead of ending the game.
+            if (activeHandIndex + 1 < hands.size()) {
+                int nextIndex = activeHandIndex + 1;
+                transaction.update(gameRef, "activeHandIndex", nextIndex);
+                
+                // Return updated active index without playing dealer/ending game
+                Map<String, Object> result = new HashMap<>(gameDoc.getData());
+                result.put("activeHandIndex", nextIndex);
+                return result; 
+            }
+
+            // ---- IT IS THE LAST HAND, RESOLVE GAME AND DEALER PLAY ----
             List<String> deck = (List<String>) gameDoc.get("deck");
             List<String> dealerHand = (List<String>) gameDoc.get("dealerHand");
-            List<Map<String, Object>> hands =
-                    (List<Map<String, Object>>) gameDoc.get("playerHands");
 
             double totalPayout = 0;
 
-            // ---- DEALER PLAY ----
             while (com.cnx.onyxbackend.util.HandUtil.calculateHandValue(dealerHand) < 17) {
                 dealerHand.add(deck.remove(0));
             }
 
-            int dealerValue =
-                    com.cnx.onyxbackend.util.HandUtil.calculateHandValue(dealerHand);
+            int dealerValue = com.cnx.onyxbackend.util.HandUtil.calculateHandValue(dealerHand);
 
-            // ---- COMPARE EACH HAND ----
             for (Map<String, Object> hand : hands) {
 
                 List<String> cards = (List<String>) hand.get("cards");
                 double bet = ((Number) hand.get("bet")).doubleValue();
 
-                int playerValue =
-                        com.cnx.onyxbackend.util.HandUtil.calculateHandValue(cards);
-
+                int playerValue = com.cnx.onyxbackend.util.HandUtil.calculateHandValue(cards);
                 boolean isBlackjack = cards.size() == 2 && playerValue == 21;
 
                 if (playerValue > 21) {
@@ -243,18 +266,13 @@ public class BlackjackService {
                 }
             }
 
-            // ---- UPDATE WALLET ----
             String walletId = gameDoc.getString("walletId");
             DocumentReference walletRef = db.collection("wallets").document(walletId);
             DocumentSnapshot walletDoc = transaction.get(walletRef).get();
 
             double balance = walletDoc.getDouble("balance");
             transaction.update(walletRef, "balance", balance + totalPayout);
-
-            // ---- CLEAR USER ACTIVE GAME ----
             transaction.update(userRef, "activeGameId", null);
-
-            // ---- DELETE SESSION ----
             transaction.delete(gameRef);
 
             Map<String, Object> result = new HashMap<>();
@@ -315,7 +333,25 @@ public class BlackjackService {
                 throw new RuntimeException("Insufficient balance to split");
             }
 
-            transaction.update(walletRef, "balance", balance - bet);
+            Double rakeRateObj = userDoc.getDouble("rakebackRate");
+            Double totalWageredObj = userDoc.getDouble("totalWagered");
+            Double rakeAvailableObj = userDoc.getDouble("rakebackAvailable");
+
+            double rakeRate = rakeRateObj != null ? rakeRateObj : 0.01;
+            double totalWagered = totalWageredObj != null ? totalWageredObj : 0.0;
+            double rakeAvailable = rakeAvailableObj != null ? rakeAvailableObj : 0.0;
+
+            double rakeEarned = bet * rakeRate;
+
+            System.out.println("Rake earned: " + rakeEarned);
+            System.out.println("Total wagered after: " + (totalWagered + bet));
+            System.out.println("Rake available after: " + (rakeAvailable + rakeEarned));
+
+
+            transaction.update(userRef, Map.of(
+                "totalWagered", totalWagered + bet,
+                "rakebackAvailable", rakeAvailable + rakeEarned
+            ));
 
             // Create two hands
             List<String> hand1Cards = new ArrayList<>();
@@ -401,7 +437,24 @@ public class BlackjackService {
             }
 
             // Deduct extra bet
-            transaction.update(walletRef, "balance", balance - bet);
+            Double rakeRateObj = userDoc.getDouble("rakebackRate");
+            Double totalWageredObj = userDoc.getDouble("totalWagered");
+            Double rakeAvailableObj = userDoc.getDouble("rakebackAvailable");
+
+            double rakeRate = rakeRateObj != null ? rakeRateObj : 0.01;
+            double totalWagered = totalWageredObj != null ? totalWageredObj : 0.0;
+            double rakeAvailable = rakeAvailableObj != null ? rakeAvailableObj : 0.0;
+
+            double rakeEarned = bet * rakeRate;
+
+            System.out.println("Rake earned: " + rakeEarned);
+            System.out.println("Total wagered after: " + (totalWagered + bet));
+            System.out.println("Rake available after: " + (rakeAvailable + rakeEarned));
+
+            transaction.update(userRef, Map.of(
+                "totalWagered", totalWagered + bet,
+                "rakebackAvailable", rakeAvailable + rakeEarned
+            ));
 
             // Update hand
             currentHand.put("bet", bet * 2);
@@ -429,6 +482,50 @@ public class BlackjackService {
             Map<String, Object> result = new HashMap<>();
             result.put("playerHands", hands);
             result.put("activeHandIndex", activeHandIndex);
+
+            return result;
+
+        }).get();
+    }
+
+    public Map<String, Object> claimRakeback(String uid) throws Exception {
+
+        return db.runTransaction(transaction -> {
+
+            DocumentReference userRef = db.collection("users").document(uid);
+            DocumentReference walletRef;
+
+            DocumentSnapshot userDoc = transaction.get(userRef).get();
+
+            Double rakeAvailableObj = userDoc.getDouble("rakebackAvailable");
+            Double rakeClaimedObj = userDoc.getDouble("rakebackClaimed");
+            String walletId = userDoc.getString("walletId");
+
+            if (walletId == null) {
+                throw new RuntimeException("Wallet not found");
+            }
+
+            walletRef = db.collection("wallets").document(walletId);
+            DocumentSnapshot walletDoc = transaction.get(walletRef).get();
+
+            double rakeAvailable = rakeAvailableObj != null ? rakeAvailableObj : 0.0;
+
+            if (rakeAvailable <= 0) {
+                throw new RuntimeException("No rakeback available");
+            }
+
+            double rakeClaimed = rakeClaimedObj != null ? rakeClaimedObj : 0.0;
+            double balance = walletDoc.getDouble("balance");
+
+            transaction.update(walletRef, "balance", balance + rakeAvailable);
+
+            transaction.update(userRef, Map.of(
+                    "rakebackAvailable", 0,
+                    "rakebackClaimed", rakeClaimed + rakeAvailable
+            ));
+
+            Map<String, Object> result = new HashMap<>();
+            result.put("claimed", rakeAvailable);
 
             return result;
 

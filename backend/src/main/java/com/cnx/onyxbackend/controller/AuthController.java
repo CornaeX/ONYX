@@ -60,6 +60,10 @@ public class AuthController {
         user.put("role", "USER");
         user.put("walletId", walletId);
         user.put("createdAt", Instant.now().toString());
+        user.put("rakebackAvailable", 0.0);
+        user.put("rakebackClaimed", 0.0);
+        user.put("totalWagered", 0.0);
+        user.put("rakebackRate", 0.01);
 
         db.collection("users")
         .document(uid)

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react'; // 🔥 ADDED useEffect
 import { useStore } from "../../../store/useStore";
 import { PlayingCard, type CardType } from './PlayingCard';
 import placeBetSFX from '../../../assets/sounds/betplace.mp3';
@@ -6,24 +6,19 @@ import cardSwipeSFX from '../../../assets/sounds/cardswipe.mp3';
 import clearBetSFX from '../../../assets/sounds/clearbet.mp3';
 import winSFX from '../../../assets/sounds/win.mp3';
 import loseSFX from '../../../assets/sounds/lose.mp3';
+import { fetchProfile } from "../../../services/userService";
 
-// --- Helper Functions ---
-const SUITS = ['♠', '♥', '♦', '♣'];
-const VALUES = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
+// Setup your auth headers here (assuming Bearer token from localStorage)
+const getAuthHeaders = () => ({
+  'Content-Type': 'application/json',
+  'Authorization': `Bearer ${localStorage.getItem('token') || ''}`
+});
 
-const getNewDeck = (): CardType[] => {
-  const deck: CardType[] = [];
-  for (const suit of SUITS) {
-    for (const value of VALUES) {
-      deck.push({ suit, value });
-    }
-  }
-  for (let i = deck.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
-  }
-  return deck;
-};
+// Helper to translate Backend string "10♥" to Frontend object {suit: '♥', value: '10'}
+const parseCard = (cardStr: string): CardType => ({
+  suit: cardStr.slice(-1),
+  value: cardStr.slice(0, -1)
+});
 
 const calculateScore = (hand: CardType[]): number => {
   let score = 0;
@@ -37,25 +32,36 @@ const calculateScore = (hand: CardType[]): number => {
   return score;
 };
 
-// --- Main Game Component ---
 export function Blackjack() {
-  // Global State Integration
   const balance = useStore((state) => state.balance);
   const setBalance = useStore((state) => state.setBalance);
+  const setRakeback = useStore((state) => state.setRakeback); // 🔥 ADDED THIS
 
-  // Local Game State
   const [currentBet, setCurrentBet] = useState<number>(0);
-  const [deck, setDeck] = useState<CardType[]>([]);
   const [playerHand, setPlayerHand] = useState<CardType[]>([]);
   const [dealerHand, setDealerHand] = useState<CardType[]>([]);
-  
   const [splitHand, setSplitHand] = useState<CardType[]>([]);
-  const [activeHand, setActiveHand] = useState<number>(0); // 0 = main hand, 1 = split hand
-  
+  const [activeHand, setActiveHand] = useState<number>(0); 
   const [gameState, setGameState] = useState<string>('betting'); 
   const [message, setMessage] = useState<string>('');
 
-  // Optimized Sound System
+  // 🔥 ADDED THIS USEEFFECT TO UPDATE NAVBAR WHEN GAME ENDS
+  useEffect(() => {
+    const updateStats = async () => {
+      try {
+        const profile = await fetchProfile();
+        setBalance(profile.balance);
+        setRakeback(profile.rakeback);
+      } catch (err) {
+        console.error("Failed to update user stats after game:", err);
+      }
+    };
+
+    if (gameState === 'gameOver') {
+      updateStats();
+    }
+  }, [gameState, setBalance, setRakeback]);
+
   const sounds = useMemo(() => ({
     bet: new Audio(placeBetSFX),
     swipe: new Audio(cardSwipeSFX),
@@ -67,19 +73,9 @@ export function Blackjack() {
   const playSound = (type: keyof typeof sounds) => {
     const audio = sounds[type];
     audio.currentTime = 0;
-    audio.play().catch(error => console.log('Audio playback prevented:', error));
+    audio.play().catch(e => console.log('Audio blocked:', e));
   };
 
-  // Safe Draw Helper
-  const drawCard = (): CardType | null => {
-    if (deck.length === 0) return null;
-    const newDeck = [...deck];
-    const card = newDeck.pop()!;
-    setDeck(newDeck);
-    return card;
-  };
-
-  // --- Betting Actions ---
   const addBet = (amount: number) => {
     if (balance >= amount) {
       setBalance(balance - amount);
@@ -102,162 +98,169 @@ export function Blackjack() {
     }
   };
 
-  // --- Game Flow ---
-  const startRound = () => {
-    if (currentBet === 0) return;
-
-    setGameState('dealing');
-    setMessage('');
-    setPlayerHand([]);
-    setSplitHand([]); // Reset split state
-    setActiveHand(0); // Reset active hand
-    setDealerHand([]);
-
-    const newDeck = getNewDeck();
-    
-    const p1 = newDeck.pop()!;
-    const d1 = newDeck.pop()!;
-    const p2 = newDeck.pop()!;
-    const d2 = newDeck.pop()!;
-    
-    setDeck(newDeck);
-
-    setTimeout(() => { setPlayerHand([p1]); playSound('swipe'); }, 600);
-    setTimeout(() => { setDealerHand([d1]); playSound('swipe'); }, 1200);
-    setTimeout(() => { setPlayerHand([p1, p2]); playSound('swipe'); }, 1800);
-    setTimeout(() => {
-      setDealerHand([d1, d2]);
-      playSound('swipe'); 
-      
-      setTimeout(() => {
-        const pScore = calculateScore([p1, p2]);
-        const dScore = calculateScore([d1, d2]);
-
-        if (pScore === 21 && dScore === 21) handleGameOver('Push! Double Blackjack.', currentBet);
-        else if (pScore === 21) handleGameOver('BLACKJACK! 🎉', currentBet * 2.5);
-        else if (dScore === 21) handleGameOver('Dealer Blackjack.', 0);
-        else setGameState('playerTurn');
-      }, 800); 
-
-    }, 2400);
-  };
-
-  const hit = () => {
-    const newCard = drawCard();
-    if (!newCard) return; 
-    playSound('swipe');
-
-    if (activeHand === 0) {
-      const newHand = [...playerHand, newCard];
-      setPlayerHand(newHand);
-      if (calculateScore(newHand) > 21) {
-        setTimeout(() => {
-          if (splitHand.length > 0) setActiveHand(1); 
-          else handleGameOver('Bust! Over 21.', 0); 
-        }, 800); 
-      }
-    } else {
-      const newHand = [...splitHand, newCard];
-      setSplitHand(newHand);
-      if (calculateScore(newHand) > 21) {
-        setTimeout(() => setGameState('dealerTurn'), 800); 
-      }
-    }
-  };
-
-  const stand = () => {
-    if (activeHand === 0 && splitHand.length > 0) {
-      setActiveHand(1);
-    } else {
-      setGameState('dealerTurn');
-    }
-  };
-
-  const doubleDown = () => {
-    if (balance < currentBet) return;
-    setBalance(balance - currentBet);
-    setCurrentBet(prev => prev * 2);
-    playSound('bet');
-    
-    const newCard = drawCard();
-    if (!newCard) return; 
-    
-    const newHand = [...playerHand, newCard];
-    setPlayerHand(newHand);
-    playSound('swipe');
-
-    setTimeout(() => {
-      if (calculateScore(newHand) > 21) handleGameOver('Bust! Over 21.', 0);
-      else setGameState('dealerTurn');
-    }, 800);
-  };
-
-  const split = () => {
-    if (balance < currentBet) return;
-    setBalance(balance - currentBet);
-    playSound('bet');
-    
-    setPlayerHand([playerHand[0]]);
-    setSplitHand([playerHand[1]]);
-  };
-
   const handleGameOver = (msg: string, payout: number) => {
     setGameState('gameOver');
     setMessage(msg);
-    
-    if (payout > currentBet) playSound('win');
+    if (payout > currentBet * (splitHand.length > 0 ? 2 : 1)) playSound('win');
     else if (payout > 0) playSound('swipe'); 
     else playSound('lose');
     
-    // Fallback wrapper for setBalance to handle raw numbers or updaters
-    setBalance((typeof balance === 'number' ? balance : 0) + payout);
+    // We can comment out or leave this since the useEffect will handle the official balance update
+    // setBalance((typeof balance === 'number' ? balance : 0) + payout); 
   };
 
-  useEffect(() => {
-    if (gameState === 'dealerTurn') {
-      const dScore = calculateScore(dealerHand);
-      if (dScore < 17) {
-        const timer = setTimeout(() => {
-          const nextCard = drawCard();
-          if (nextCard) { 
-            setDealerHand(prev => [...prev, nextCard]);
+  // Centralized resolution for when the game ends
+  const resolveDealerPlayAndGameOver = (data: any) => {
+    setGameState('dealerTurn');
+    const finalDealerHand = data.dealerHand.map(parseCard);
+    
+    setDealerHand([finalDealerHand[0], finalDealerHand[1]]);
+    
+    // Animate additional dealer draws to mimic your old useEffect
+    let delay = 1000;
+    for (let i = 2; i < finalDealerHand.length; i++) {
+        setTimeout(() => {
+            setDealerHand(prev => [...prev, finalDealerHand[i]]);
             playSound('swipe');
-          }
-        }, 1500); 
-        return () => clearTimeout(timer);
-      } else {
-        const resultTimer = setTimeout(() => {
-          let totalPayout = 0;
-          let finalMsg = '';
-
-          const evaluateHand = (hand: CardType[], name: string) => {
-            const pScore = calculateScore(hand);
-            if (pScore > 21) { finalMsg += `${name} Busts. `; return 0; }
-            if (dScore > 21) { finalMsg += `Dealer Busts, ${name} Wins! 🏆 `; return currentBet * 2; }
-            if (pScore > dScore) { finalMsg += `${name} Wins! 🏆 `; return currentBet * 2; }
-            if (pScore < dScore) { finalMsg += `${name} Loses. `; return 0; }
-            finalMsg += `${name} Pushes. `; return currentBet;
-          };
-
-          if (splitHand.length > 0) {
-             totalPayout += evaluateHand(playerHand, 'Hand 1');
-             totalPayout += evaluateHand(splitHand, 'Hand 2');
-          } else {
-             const pScore = calculateScore(playerHand);
-             if (pScore > 21) { finalMsg = 'Bust! Over 21.'; totalPayout = 0; }
-             else if (dScore > 21) { finalMsg = 'Dealer Busts! You Win 🏆'; totalPayout = currentBet * 2; }
-             else if (pScore > dScore) { finalMsg = 'You Win! 🏆'; totalPayout = currentBet * 2; }
-             else if (pScore < dScore) { finalMsg = 'Dealer Wins.'; totalPayout = 0; }
-             else { finalMsg = 'Push! It\'s a tie.'; totalPayout = currentBet; }
-          }
-
-          handleGameOver(finalMsg.trim(), totalPayout);
-        }, 800);
-        return () => clearTimeout(resultTimer);
-      }
+        }, delay);
+        delay += 1000;
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [gameState, dealerHand, splitHand, playerHand]);
+
+    setTimeout(() => {
+        let msg = "";
+        const pPayout = data.payout;
+        if (pPayout > currentBet * (splitHand.length > 0 ? 2 : 1)) msg = "You Win! 🏆";
+        else if (pPayout > 0) msg = "Push / Partial Win";
+        else msg = "Dealer Wins.";
+        
+        // Override for total bust purely for visual feedback
+        const pScore = calculateScore(playerHand);
+        if (pScore > 21 && splitHand.length === 0) msg = "Bust! Over 21.";
+
+        handleGameOver(msg, pPayout);
+    }, delay + 500);
+  };
+
+  const startRound = async () => {
+    if (currentBet === 0) return;
+    setGameState('dealing');
+    setMessage('');
+    setPlayerHand([]);
+    setSplitHand([]); 
+    setActiveHand(0); 
+    setDealerHand([]);
+
+    try {
+      const res = await fetch('https://onyxbackend.share.zrok.io/api/blackjack/start', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ bet: currentBet })
+      });
+      const data = await res.json();
+      
+      const pCards = data.playerHands[0].cards.map(parseCard);
+      const dCards = data.dealerHand.map(parseCard);
+
+      // Preserve your exact dealing animations
+      setTimeout(() => { setPlayerHand([pCards[0]]); playSound('swipe'); }, 600);
+      setTimeout(() => { setDealerHand([dCards[0]]); playSound('swipe'); }, 1200);
+      setTimeout(() => { setPlayerHand([pCards[0], pCards[1]]); playSound('swipe'); }, 1800);
+      setTimeout(async () => {
+        setDealerHand([dCards[0], dCards[1]]);
+        playSound('swipe'); 
+        
+        const pScore = calculateScore([pCards[0], pCards[1]]);
+        const dScore = calculateScore([dCards[0], dCards[1]]);
+
+        // Auto-stand if blackjack is dealt to trigger backend payout
+        if (pScore === 21 || dScore === 21) {
+          stand(); 
+        } else {
+          setGameState('playerTurn');
+        }
+      }, 2400);
+
+    } catch (e) {
+      console.error(e);
+      setMessage("Error starting game");
+      setGameState('betting');
+    }
+  };
+
+  const hit = async () => {
+    try {
+      const res = await fetch('https://onyxbackend.share.zrok.io/api/blackjack/hit', { method: 'POST', headers: getAuthHeaders() });
+      const data = await res.json();
+      playSound('swipe');
+
+      const hands = data.playerHands;
+      setPlayerHand(hands[0].cards.map(parseCard));
+      if (hands.length > 1) {
+        setSplitHand(hands[1].cards.map(parseCard));
+      }
+      setActiveHand(data.activeHandIndex);
+
+      if (data.status === 'DEALER_TURN') {
+        // Hand busted and backend progressed to end. Call stand to finish game & clear DB session.
+        setTimeout(() => stand(), 800); 
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const stand = async () => {
+    try {
+      const res = await fetch('https://onyxbackend.share.zrok.io/api/blackjack/stand', { method: 'POST', headers: getAuthHeaders() });
+      const data = await res.json();
+      
+      // If payout is undefined, it means we stood on a split hand and advanced the index.
+      if (data.activeHandIndex !== undefined && data.payout === undefined) {
+         setActiveHand(data.activeHandIndex);
+      } else {
+         resolveDealerPlayAndGameOver(data); 
+      }
+    } catch (e) { console.error(e); }
+  };
+
+  const doubleDown = async () => {
+    if (balance < currentBet) return;
+    try {
+      const res = await fetch('https://onyxbackend.share.zrok.io/api/blackjack/double', { method: 'POST', headers: getAuthHeaders() });
+      const data = await res.json();
+      
+      playSound('bet');
+      setBalance(balance - currentBet);
+      setCurrentBet(prev => prev * 2);
+
+      const hands = data.playerHands;
+      setPlayerHand(hands[0].cards.map(parseCard));
+      if (hands.length > 1) setSplitHand(hands[1].cards.map(parseCard));
+      
+      playSound('swipe');
+
+      setTimeout(() => {
+        if (data.status === 'DEALER_TURN' || (data.activeHandIndex === 0 && hands.length === 1)) {
+          stand(); // Last hand doubled, trigger dealer resolution
+        } else {
+          setActiveHand(data.activeHandIndex); // Move to next split hand
+        }
+      }, 800);
+    } catch(e) { console.error(e); }
+  };
+
+  const split = async () => {
+    if (balance < currentBet) return;
+    try {
+      const res = await fetch('https://onyxbackend.share.zrok.io/api/blackjack/split', { method: 'POST', headers: getAuthHeaders() });
+      const data = await res.json();
+      
+      playSound('bet');
+      setBalance(balance - currentBet);
+      
+      setPlayerHand(data.playerHands[0].cards.map(parseCard));
+      setSplitHand(data.playerHands[1].cards.map(parseCard));
+      setActiveHand(data.activeHandIndex);
+    } catch(e) { console.error(e); }
+  };
 
   const hideDealerCard = gameState === 'dealing' || gameState === 'playerTurn';
   const visibleDealerScore = hideDealerCard && dealerHand.length > 0 
@@ -265,9 +268,9 @@ export function Blackjack() {
     : calculateScore(dealerHand);
 
   const canDouble = playerHand.length === 2 && splitHand.length === 0 && balance >= currentBet;
-  const canSplit = playerHand.length === 2 && splitHand.length === 0 && balance >= currentBet && calculateScore([playerHand[0]]) === calculateScore([playerHand[1]]);
+  const canSplit = playerHand.length === 2 && splitHand.length === 0 && balance >= currentBet && playerHand[0]?.value === playerHand[1]?.value;
 
-  // --- UI Render ---
+  // --- EXACT SAME UI RENDER BELOW THIS LINE ---
   return (
     <div className="flex flex-col items-center justify-between h-[650px] w-full max-w-4xl mx-auto bg-[#070E20] rounded-2xl border border-gray-800 p-8 shadow-2xl relative overflow-hidden font-sans text-white">
       

@@ -1,10 +1,14 @@
 package com.cnx.onyxbackend.controller;
 
-import com.cnx.onyxbackend.service.BlackjackService;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.Map;
+
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.cnx.onyxbackend.service.BlackjackService;
 
 @RestController
 @RequestMapping("/api/blackjack")
@@ -62,5 +66,13 @@ public class BlackjackController {
     ) throws Exception {
 
         return blackjackService.doubleDown(uid);
+    }
+
+    @PostMapping("/claim-rakeback")
+    public Map<String, Object> claimRakeback(
+            @AuthenticationPrincipal String uid
+    ) throws Exception {
+
+        return blackjackService.claimRakeback(uid);
     }
 }

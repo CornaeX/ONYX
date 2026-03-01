@@ -17,7 +17,6 @@ import com.google.api.core.ApiFuture;
 import com.google.cloud.firestore.DocumentReference;
 import com.google.cloud.firestore.DocumentSnapshot;
 import com.google.cloud.firestore.Firestore;
-import com.google.cloud.firestore.Transaction;
 import com.google.firebase.cloud.FirestoreClient;
 
 @RestController
@@ -31,6 +30,8 @@ public class UserController {
         Firestore db = FirestoreClient.getFirestore();
 
         DocumentSnapshot userDoc = db.collection("users").document(uid).get().get();
+        Double rakebackAvailableObj = userDoc.getDouble("rakebackAvailable");
+        double rakebackAvailable = rakebackAvailableObj != null ? rakebackAvailableObj : 0.0;
 
         String username = userDoc.getString("email"); // later change to username
         String role = userDoc.getString("role");
@@ -45,6 +46,7 @@ public class UserController {
         response.put("username", username);
         response.put("role", role);
         response.put("balance", balance);
+        response.put("rakeback", rakebackAvailable);
 
         return response;
     }

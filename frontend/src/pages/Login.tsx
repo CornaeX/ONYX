@@ -13,7 +13,7 @@ const Login: React.FC = () => {
     const [password, setPassword] = useState('');
     const [error, setError] = useState(''); // Added to handle errors
 
-    const { setUser, setBalance } = useStore();
+    const { setUser, setBalance, setRakeback } = useStore();
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -31,6 +31,7 @@ const Login: React.FC = () => {
             });
 
             setBalance(profile.balance);
+            setRakeback(profile.rakeback);
 
             navigate('/');
         } catch (err) {
