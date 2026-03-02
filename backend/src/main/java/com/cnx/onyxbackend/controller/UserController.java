@@ -2,7 +2,6 @@ package com.cnx.onyxbackend.controller;
 
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -13,122 +12,92 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.google.api.core.ApiFuture;
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.DocumentSnapshot;
-import com.google.cloud.firestore.Firestore;
-import com.google.firebase.cloud.FirestoreClient;
-
+import com.cnx.onyxbackend.model.User;
+import com.cnx.onyxbackend.service.TransactionService;
+import com.cnx.onyxbackend.service.UserService;
 @RestController
 @RequestMapping("/api/user")
 public class UserController {
 
+    private final UserService userService;
+    private final TransactionService transactionService;
+
+    // Inject our new PostgreSQL Repository and Transaction Service
+    public UserController(UserService userService, TransactionService transactionService) {
+        this.userService = userService;
+        this.transactionService = transactionService;
+    }
+
     @GetMapping("/profile")
-    public Map<String, Object> getProfile(Authentication authentication) throws Exception {
+    public ResponseEntity<?> getProfile(Authentication authentication) {
+        try {
+            // Get the Firebase UID from the security token
+            String uid = authentication.getName();
 
-        String uid = authentication.getName();
-        Firestore db = FirestoreClient.getFirestore();
+            // Fetch the user directly from PostgreSQL
+            User user = userService.getUserProfile(uid);
 
-        DocumentSnapshot userDoc = db.collection("users").document(uid).get().get();
-        Double rakebackAvailableObj = userDoc.getDouble("rakebackAvailable");
-        double rakebackAvailable = rakebackAvailableObj != null ? rakebackAvailableObj : 0.0;
+            // Build the response exactly how the frontend expects it
+            Map<String, Object> response = new HashMap<>();
+            response.put("uid", user.getUid());
+            response.put("username", user.getEmail());
+            response.put("role", "USER");
+            response.put("balance", user.getBalance());
+            response.put("rakeback", user.getRakebackAvailable());
 
-        String username = userDoc.getString("email"); // later change to username
-        String role = userDoc.getString("role");
-        String walletId = userDoc.getString("walletId");
-
-        DocumentSnapshot walletDoc = db.collection("wallets").document(walletId).get().get();
-
-        // 🔥 FIX: Use getDouble() instead of getLong() so the cents aren't deleted!
-        Double balanceObj = walletDoc.getDouble("balance");
-        double balance = balanceObj != null ? balanceObj : 0.0;
-
-        Map<String, Object> response = new HashMap<>();
-        response.put("uid", uid);
-        response.put("username", username);
-        response.put("role", role);
-        response.put("balance", balance); // Now this sends 15.85 instead of just 15
-        response.put("rakeback", rakebackAvailable);
-
-        return response;
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(403).body("Error fetching profile: " + e.getMessage());
+        }
     }
 
     @PostMapping("/deposit")
     public ResponseEntity<?> deposit(
-            @AuthenticationPrincipal String uid,
+            Authentication authentication,
             @RequestBody Map<String, Double> body
     ) {
         try {
+            String uid = authentication.getName();
             double amount = body.get("amount");
-            Firestore db = FirestoreClient.getFirestore();
 
-            // 1. Get Wallet ID (we do this outside the transaction to keep the transaction fast)
-            String walletId = db.collection("users").document(uid).get().get().getString("walletId");
-            DocumentReference walletRef = db.collection("wallets").document(walletId);
+            // Use the TransactionService we updated earlier!
+            User updatedUser = transactionService.deposit(uid, amount);
 
-            // 2. Run safely inside a Firestore Transaction
-            ApiFuture<Double> futureTransaction = db.runTransaction(transaction -> {
-                // Fetch the current state inside the transaction
-                DocumentSnapshot snapshot = transaction.get(walletRef).get();
-                
-                // Handle null balance safely
-                Double currentBalance = snapshot.getDouble("balance");
-                double startingBalance = currentBalance != null ? currentBalance : 0.0;
-                
-                double newBalance = startingBalance + amount;
-
-                // Update the document
-                transaction.update(walletRef, "balance", newBalance);
-                
-                return newBalance;
-            });
-
-            // 3. Wait for the transaction to finish and get the result
-            double finalBalance = futureTransaction.get();
-            return ResponseEntity.ok(Map.of("balance", finalBalance));
+            return ResponseEntity.ok(Map.of("balance", updatedUser.getBalance()));
 
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Deposit failed: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body("Deposit failed: " + e.getMessage());
         }
     }
 
     @PostMapping("/withdraw")
     public ResponseEntity<?> withdraw(
-            @AuthenticationPrincipal String uid,
+            Authentication authentication,
             @RequestBody Map<String, Double> body
     ) {
         try {
+            String uid = authentication.getName();
             double amount = body.get("amount");
-            Firestore db = FirestoreClient.getFirestore();
 
-            String walletId = db.collection("users").document(uid).get().get().getString("walletId");
-            DocumentReference walletRef = db.collection("wallets").document(walletId);
+            // Use the TransactionService we updated earlier!
+            User updatedUser = transactionService.withdraw(uid, amount);
 
-            ApiFuture<Double> futureTransaction = db.runTransaction(transaction -> {
-                DocumentSnapshot snapshot = transaction.get(walletRef).get();
-                
-                Double currentBalance = snapshot.getDouble("balance");
-                double startingBalance = currentBalance != null ? currentBalance : 0.0;
+            return ResponseEntity.ok(Map.of("balance", updatedUser.getBalance()));
 
-                // Check for insufficient funds INSIDE the transaction
-                if (amount > startingBalance) {
-                    throw new Exception("Insufficient funds");
-                }
-
-                double newBalance = startingBalance - amount;
-                transaction.update(walletRef, "balance", newBalance);
-                
-                return newBalance;
-            });
-
-            double finalBalance = futureTransaction.get();
-            return ResponseEntity.ok(Map.of("balance", finalBalance));
-
-        } catch (ExecutionException e) {
-            // ExecutionException wraps the error we threw inside the transaction
-            return ResponseEntity.badRequest().body(e.getCause().getMessage());
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body("Withdrawal failed: " + e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body("Withdrawal failed: " + e.getMessage());
         }
+    }
+
+    @PostMapping("/claim-rakeback")
+    public Map<String, Double> claimRakeback(
+            @AuthenticationPrincipal String uid
+    ) throws Exception {
+
+        return transactionService.claimRakeback(uid);
     }
 }

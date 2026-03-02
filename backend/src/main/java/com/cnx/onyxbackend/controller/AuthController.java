@@ -1,9 +1,5 @@
 package com.cnx.onyxbackend.controller;
 
-import java.time.Instant;
-import java.util.HashMap;
-import java.util.Map;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,10 +7,8 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.cnx.onyxbackend.model.User;
 import com.cnx.onyxbackend.service.AuthService;
-import com.google.cloud.firestore.Firestore;
-import com.google.firebase.auth.FirebaseToken;
-import com.google.firebase.cloud.FirestoreClient;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -30,46 +24,20 @@ public class AuthController {
     @PostMapping("/register")
     public ResponseEntity<?> register(
             @RequestHeader("Authorization") String authHeader
-    ) throws Exception {
+    ) {
+        try {
+            // 1. Extract the token
+            String token = authHeader.replace("Bearer ", "");
+            
+            // 2. Verify token and save the user to PostgreSQL (Wallet is included inside User!)
+            User savedUser = authService.getOrCreateUserFromToken(token);
 
-        String token = authHeader.replace("Bearer ", "");
-        FirebaseToken decodedToken = authService.verifyToken(token);
-
-        String uid = decodedToken.getUid();
-        String email = decodedToken.getEmail();
-
-        Firestore db = FirestoreClient.getFirestore();
-
-        // Create wallet
-        String walletId = "wallet_" + uid;
-
-        Map<String, Object> wallet = new HashMap<>();
-        wallet.put("walletId", walletId);
-        wallet.put("balance", 0);
-        wallet.put("createdAt", Instant.now().toString());
-
-        db.collection("wallets")
-        .document(walletId)
-        .set(wallet)
-        .get(); // 🔥 WAIT
-
-        // Create user
-        Map<String, Object> user = new HashMap<>();
-        user.put("uid", uid);
-        user.put("email", email);
-        user.put("role", "USER");
-        user.put("walletId", walletId);
-        user.put("createdAt", Instant.now().toString());
-        user.put("rakebackAvailable", 0.0);
-        user.put("rakebackClaimed", 0.0);
-        user.put("totalWagered", 0.0);
-        user.put("rakebackRate", 0.01);
-
-        db.collection("users")
-        .document(uid)
-        .set(user)
-        .get(); // 🔥 WAIT
-
-        return ResponseEntity.ok("User + Wallet created");
+            // 3. Return success
+            return ResponseEntity.ok(savedUser);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body("Registration failed: " + e.getMessage());
+        }
     }
 }

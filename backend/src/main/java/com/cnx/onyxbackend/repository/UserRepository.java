@@ -11,11 +11,10 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface UserRepository extends JpaRepository<User, Long> {
+public interface UserRepository extends JpaRepository<User, String> { // Changed to String
 
-    // The magic happens here: PESSIMISTIC_WRITE locks the row.
-    // Thread B will be forced to wait here until Thread A finishes saving.
+    // PESSIMISTIC_WRITE locks the row so bets/deposits are mathematically safe
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("SELECT u FROM User u WHERE u.id = :id")
-    Optional<User> findByIdForUpdate(@Param("id") Long id);
+    @Query("SELECT u FROM User u WHERE u.uid = :uid") // Changed to u.uid
+    Optional<User> findByIdForUpdate(@Param("uid") String uid); // Changed to String
 }

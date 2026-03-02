@@ -24,8 +24,8 @@ export const Sidebar = () => {
   const casinoItems = [
     { icon: Gamepad2, label: 'Table games' },
     { icon: LayoutGrid, label: 'Slots' },
-    { icon: Rocket, label: 'EarnBet' },
     { icon: Gift, label: 'Lottery' },
+    { icon: Rocket, label: 'Crash' },
   ];
 
   const handleLogout = async () => {
@@ -66,7 +66,7 @@ export const Sidebar = () => {
           ].map((item, i) => (
             <div
               key={i}
-              className="w-14 h-14 rounded-xl overflow-hidden border border-white/10 cursor-pointer transition-transform hover:scale-105"
+              className="w-14 h-14 rounded-xl overflow-hidden border border-white/10 transition-transform hover:scale-105"
             >
               <img
                 src={item.img}
@@ -109,7 +109,7 @@ export const Sidebar = () => {
         </div>
 
         {/* Other Sections */}
-        <div className="mt-4 pt-4 border-t border-white/5 space-y-2 px-1">
+        {/* <div className="mt-4 pt-4 border-t border-white/5 space-y-2 px-1">
           {[
             { icon: Award, label: 'Rewards', count: '26' },
             { icon: Trophy, label: 'Rank' },
@@ -126,7 +126,7 @@ export const Sidebar = () => {
               )}
             </button>
           ))}
-        </div>
+        </div> */}
       </div>
 
       {/* Bottom Logout */}

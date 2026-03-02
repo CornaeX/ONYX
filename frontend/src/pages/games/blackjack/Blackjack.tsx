@@ -35,7 +35,6 @@ const calculateScore = (hand: CardType[]): number => {
 export function Blackjack() {
   const balance = useStore((state) => state.balance);
   const setBalance = useStore((state) => state.setBalance);
-  const setRakeback = useStore((state) => state.setRakeback); // 🔥 ADDED THIS
 
   const [currentBet, setCurrentBet] = useState<number>(0);
   const [playerHand, setPlayerHand] = useState<CardType[]>([]);
@@ -47,20 +46,47 @@ export function Blackjack() {
 
   // 🔥 ADDED THIS USEEFFECT TO UPDATE NAVBAR WHEN GAME ENDS
   useEffect(() => {
-    const updateStats = async () => {
-      try {
-        const profile = await fetchProfile();
-        setBalance(profile.balance);
-        setRakeback(profile.rakeback);
-      } catch (err) {
-        console.error("Failed to update user stats after game:", err);
-      }
-    };
+  const restoreSession = async () => {
+    try {
+      const res = await fetch(
+        'https://onyxbackend.share.zrok.io/api/blackjack/session',
+        { headers: getAuthHeaders() }
+      );
 
-    if (gameState === 'gameOver') {
-      updateStats();
+      if (!res.ok) {
+        console.error("Session restore failed:", res.status);
+        return;
+      }
+
+      const data = await res.json();
+
+      if (!data.active) return;
+
+      const session = data.data;
+
+      setCurrentBet(session.betAmount);
+      setPlayerHand(session.playerHands[0].cards.map(parseCard));
+
+      if (session.playerHands.length > 1) {
+        setSplitHand(session.playerHands[1].cards.map(parseCard));
+      }
+
+      setDealerHand(session.dealerHand.map(parseCard));
+      setActiveHand(session.activeHandIndex);
+
+      if (session.status === "PLAYER_TURN") {
+        setGameState("playerTurn");
+      } else if (session.status === "DEALER_TURN") {
+        setGameState("dealerTurn");
+      }
+
+    } catch (err) {
+      console.error("Restore failed", err);
     }
-  }, [gameState, setBalance, setRakeback]);
+  };
+
+  restoreSession();
+}, []);
 
   const sounds = useMemo(() => ({
     bet: new Audio(placeBetSFX),
@@ -160,26 +186,30 @@ export function Blackjack() {
         body: JSON.stringify({ bet: currentBet })
       });
       const data = await res.json();
+      if (typeof data.balance === "number") {
+        setBalance(data.balance);
+      }
+      if (typeof data.rakebackAvailable === "number") {
+        useStore.getState().setRakeback(data.rakebackAvailable);
+      }
       
       const pCards = data.playerHands[0].cards.map(parseCard);
       const dCards = data.dealerHand.map(parseCard);
 
-      // Preserve your exact dealing animations
+      // Realistic dealing animation
       setTimeout(() => { setPlayerHand([pCards[0]]); playSound('swipe'); }, 600);
       setTimeout(() => { setDealerHand([dCards[0]]); playSound('swipe'); }, 1200);
       setTimeout(() => { setPlayerHand([pCards[0], pCards[1]]); playSound('swipe'); }, 1800);
+      
       setTimeout(async () => {
         setDealerHand([dCards[0], dCards[1]]);
         playSound('swipe'); 
         
-        const pScore = calculateScore([pCards[0], pCards[1]]);
-        const dScore = calculateScore([dCards[0], dCards[1]]);
-
-        // Auto-stand if blackjack is dealt to trigger backend payout
-        if (pScore === 21 || dScore === 21) {
-          stand(); 
+        // Check if the backend instantly resolved a Blackjack
+        if (data.status === 'FINISHED') {
+            resolveDealerPlayAndGameOver(data);
         } else {
-          setGameState('playerTurn');
+            setGameState('playerTurn');
         }
       }, 2400);
 
@@ -194,17 +224,27 @@ export function Blackjack() {
     try {
       const res = await fetch('https://onyxbackend.share.zrok.io/api/blackjack/hit', { method: 'POST', headers: getAuthHeaders() });
       const data = await res.json();
+      if (typeof data.balance === "number") {
+        setBalance(data.balance);
+      }
+      if (typeof data.rakebackAvailable === "number") {
+        useStore.getState().setRakeback(data.rakebackAvailable);
+      }
+
       playSound('swipe');
 
       const hands = data.playerHands;
+      const currentCards = hands[data.activeHandIndex].cards.map(parseCard);
+      const score = calculateScore(currentCards);
+      
       setPlayerHand(hands[0].cards.map(parseCard));
       if (hands.length > 1) {
         setSplitHand(hands[1].cards.map(parseCard));
       }
       setActiveHand(data.activeHandIndex);
 
-      if (data.status === 'DEALER_TURN') {
-        // Hand busted and backend progressed to end. Call stand to finish game & clear DB session.
+      // Realistic Auto-Stand: If dealer turn forced OR player hits exactly 21
+      if (data.status === 'DEALER_TURN' || score === 21) {
         setTimeout(() => stand(), 800); 
       }
     } catch (e) { console.error(e); }
@@ -212,16 +252,33 @@ export function Blackjack() {
 
   const stand = async () => {
     try {
-      const res = await fetch('https://onyxbackend.share.zrok.io/api/blackjack/stand', { method: 'POST', headers: getAuthHeaders() });
+      const res = await fetch(
+        'https://onyxbackend.share.zrok.io/api/blackjack/stand',
+        { method: 'POST', headers: getAuthHeaders() }
+      );
+
       const data = await res.json();
-      
-      // If payout is undefined, it means we stood on a split hand and advanced the index.
-      if (data.activeHandIndex !== undefined && data.payout === undefined) {
-         setActiveHand(data.activeHandIndex);
-      } else {
-         resolveDealerPlayAndGameOver(data); 
+
+      // 🔥 UPDATE BALANCE FROM DB
+      if (typeof data.balance === "number") {
+        setBalance(data.balance);
       }
-    } catch (e) { console.error(e); }
+      if (typeof data.rakebackAvailable === "number") {
+        useStore.getState().setRakeback(data.rakebackAvailable);
+      }
+
+      // 🔥 FIX: Rely on the game status rather than payout being undefined.
+      // If the backend says it's still the player's turn, we just move to the next split hand.
+      if (data.status === "PLAYER_TURN") {
+        setActiveHand(data.activeHandIndex);
+      } else {
+        // Only resolve the dealer and end the game if the status is DEALER_TURN or FINISHED
+        resolveDealerPlayAndGameOver(data);
+      }
+
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const doubleDown = async () => {
@@ -231,7 +288,12 @@ export function Blackjack() {
       const data = await res.json();
       
       playSound('bet');
-      setBalance(balance - currentBet);
+      if (typeof data.balance === "number") {
+        setBalance(data.balance);
+      }
+      if (typeof data.rakebackAvailable === "number") {
+        useStore.getState().setRakeback(data.rakebackAvailable);
+      }
       setCurrentBet(prev => prev * 2);
 
       const hands = data.playerHands;
@@ -257,7 +319,12 @@ export function Blackjack() {
       const data = await res.json();
       
       playSound('bet');
-      setBalance(balance - currentBet);
+      if (typeof data.balance === "number") {
+        setBalance(data.balance);
+      }
+      if (typeof data.rakebackAvailable === "number") {
+        useStore.getState().setRakeback(data.rakebackAvailable);
+      }
       
       setPlayerHand(data.playerHands[0].cards.map(parseCard));
       setSplitHand(data.playerHands[1].cards.map(parseCard));
@@ -304,12 +371,12 @@ export function Blackjack() {
             <div className="text-center relative min-h-[160px]">
               {gameState !== 'dealing' && (
                 <h3 className="text-gray-500 font-bold tracking-widest text-xs mb-3">
-                  DEALER {dealerHand.length > 1 && `- ${visibleDealerScore}`}
+                  DEALER {dealerHand.length > 0 && `- ${visibleDealerScore}`}
                 </h3>
               )}
               <div className="flex justify-center -space-x-12">
                 {dealerHand.map((card, i) => (
-                  <PlayingCard key={`${card.suit}-${card.value}-${i}`} card={card} hidden={hideDealerCard && i === 0} />
+                  <PlayingCard key={`${card.suit}-${card.value}-${i}`} card={card} hidden={hideDealerCard && i === 1} />
                 ))}
               </div>
             </div>

@@ -6,7 +6,7 @@ import dailySpinGif from "../assets/gifs/daily-spin.gif";
 
 export const Home = () => {
   const [activeTab, setActiveTab] = useState('All Games');
-  const categories = ['All Games', 'Table Games', 'Slots', 'EarnBet', 'Lottery', 'Crash'];
+  const categories = ['All Games', 'Table Games', 'Slots', 'Lottery', 'Crash'];
   const navigate = useNavigate();
 
   // Mock array to simulate "Show All" vs "Carousel" view

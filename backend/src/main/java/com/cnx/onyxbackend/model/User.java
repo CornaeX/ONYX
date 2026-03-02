@@ -1,25 +1,27 @@
 package com.cnx.onyxbackend.model;
 
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import lombok.Data;
 
 @Entity
-@Table(name = "users") // "user" is often a reserved keyword in databases like Postgres
+@Table(name = "users")
+@Data // Lombok annotation: auto-generates Getters, Setters, and Constructors
 public class User {
 
+    // The ID is now a String to match the Firebase Auth UID
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String uid; 
 
-    private double balance;
-
-    // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    private String email;
+    private double balance = 0.0;
     
-    public double getBalance() { return balance; }
-    public void setBalance(double balance) { this.balance = balance; }
+    // Blackjack & Rakeback Stats
+    private double totalWagered = 0.0;
+    private double rakebackAvailable = 0.0;
+    private double rakebackClaimed = 0.0;
+    private double rakebackRate = 0.01; // Example: 1% rakeback
+    
+    private String activeGameId;
 }

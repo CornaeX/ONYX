@@ -1,541 +1,355 @@
 package com.cnx.onyxbackend.service;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
-
-import org.springframework.stereotype.Service;
-
+import com.cnx.onyxbackend.dto.BlackjackResponseDTO;
+import com.cnx.onyxbackend.dto.PlayerHandDTO;
+import com.cnx.onyxbackend.model.BlackjackSession;
 import com.cnx.onyxbackend.model.GameStatus;
+import com.cnx.onyxbackend.model.PlayerHand;
+import com.cnx.onyxbackend.model.User;
+import com.cnx.onyxbackend.repository.BlackjackSessionRepository;
+import com.cnx.onyxbackend.repository.UserRepository;
+import com.cnx.onyxbackend.util.DealerUtil;
 import com.cnx.onyxbackend.util.DeckUtil;
-import com.google.cloud.firestore.DocumentReference;
-import com.google.cloud.firestore.DocumentSnapshot;
-import com.google.cloud.firestore.FieldValue;
-import com.google.cloud.firestore.Firestore;
+import com.cnx.onyxbackend.util.HandUtil;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.*;
 
 @Service
 public class BlackjackService {
 
-    private final Firestore db;
+    private final UserRepository userRepository;
+    private final BlackjackSessionRepository sessionRepository;
 
-    public BlackjackService(Firestore db) {
-        this.db = db;
+    public BlackjackService(UserRepository userRepository, BlackjackSessionRepository sessionRepository) {
+        this.userRepository = userRepository;
+        this.sessionRepository = sessionRepository;
     }
 
-    public Map<String, Object> startGame(String uid, double bet) throws Exception {
+    @Transactional
+    public BlackjackResponseDTO startGame(String uid, double bet) throws Exception {
+        // 1. Fetch and Lock the user
+        User user = userRepository.findByIdForUpdate(uid)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return db.runTransaction(transaction -> {
+        if (user.getActiveGameId() != null) throw new RuntimeException("Game already active");
+        if (user.getBalance() < bet) throw new RuntimeException("Insufficient balance");
 
-            DocumentReference userRef = db.collection("users").document(uid);
-            DocumentSnapshot userDoc = transaction.get(userRef).get();
+        // 2. Math & Deductions
+        double rakeEarned = bet * user.getRakebackRate();
+        user.setBalance(user.getBalance() - bet);
+        user.setTotalWagered(user.getTotalWagered() + bet);
+        user.setRakebackAvailable(user.getRakebackAvailable() + rakeEarned);
 
-            Double totalWageredObj = userDoc.getDouble("totalWagered");
-            Double rakeAvailableObj = userDoc.getDouble("rakebackAvailable");
-            Double rakeRateObj = userDoc.getDouble("rakebackRate");
+        // 3. Setup Cards
+        List<String> deck = DeckUtil.generateShuffledDeck();
+        List<String> playerHandCards = new ArrayList<>(Arrays.asList(deck.remove(0), deck.remove(0)));
+        List<String> dealerHand = new ArrayList<>(Arrays.asList(deck.remove(0), deck.remove(0)));
 
-            double totalWagered = totalWageredObj != null ? totalWageredObj : 0.0;
-            double rakeAvailable = rakeAvailableObj != null ? rakeAvailableObj : 0.0;
-            double rakeRate = rakeRateObj != null ? rakeRateObj : 0.01;
+        PlayerHand firstHand = new PlayerHand();
+        firstHand.setCards(playerHandCards);
+        firstHand.setBet(bet);
+        firstHand.setDoubled(false);
 
-            double rakeEarned = bet * rakeRate;
+        // 4. Create Postgres Session
+        BlackjackSession session = new BlackjackSession();
+        session.setId(UUID.randomUUID().toString());
+        session.setUid(uid);
+        session.setBetAmount(bet);
+        session.setDeck(deck);
+        session.setDealerHand(dealerHand);
+        session.getPlayerHands().add(firstHand);
 
-            if (!userDoc.exists()) {
-                throw new RuntimeException("User not found");
-            }
+        // --- NEW: REALISTIC INSTANT BLACKJACK CHECK ---
+        int playerValue = HandUtil.calculateHandValue(playerHandCards);
+        int dealerValue = HandUtil.calculateHandValue(dealerHand);
+        boolean playerBJ = (playerValue == 21);
+        boolean dealerBJ = (dealerValue == 21);
 
-            String activeGameId = userDoc.getString("activeGameId");
-            if (activeGameId != null) {
-                throw new RuntimeException("Game already active");
-            }
-
-            String walletId = userDoc.getString("walletId");
-            if (walletId == null) {
-                throw new RuntimeException("Wallet not found");
-            }
-
-            DocumentReference walletRef = db.collection("wallets").document(walletId);
-            DocumentSnapshot walletDoc = transaction.get(walletRef).get();
-
-            if (!walletDoc.exists()) {
-                throw new RuntimeException("Wallet document missing");
-            }
-
-            Double balanceObj = walletDoc.getDouble("balance");
-            double balance = balanceObj != null ? balanceObj : 0.0;
-
-            if (balance < bet) {
-                throw new RuntimeException("Insufficient balance");
-            }
-
-            // Deduct bet
-            transaction.update(walletRef, "balance", balance - bet);
-
-            // Update rake tracking
-            transaction.update(userRef, Map.of(
-                "totalWagered", totalWagered + bet,
-                "rakebackAvailable", rakeAvailable + rakeEarned
-            ));
-
-            // Generate deck
-            List<String> deck = DeckUtil.generateShuffledDeck();
-
-            List<String> playerHand = new ArrayList<>();
-            List<String> dealerHand = new ArrayList<>();
-
-            playerHand.add(deck.remove(0));
-            dealerHand.add(deck.remove(0));
-            playerHand.add(deck.remove(0));
-            dealerHand.add(deck.remove(0));
-
-            String gameId = UUID.randomUUID().toString();
-
-            Map<String, Object> session = new HashMap<>();
-            session.put("uid", uid);
-            session.put("walletId", walletId);
-            session.put("betAmount", bet);
-            session.put("deck", deck);
-            Map<String, Object> firstHand = new HashMap<>();
-            firstHand.put("cards", playerHand);
-            firstHand.put("bet", bet);
-            firstHand.put("doubled", false);
-
-            List<Map<String, Object>> hands = new ArrayList<>();
-            hands.add(firstHand);
-
-            session.put("playerHands", hands);
-            session.put("dealerHand", dealerHand);
-            session.put("activeHandIndex", 0);
-            session.put("status", GameStatus.PLAYER_TURN.name());
-            session.put("createdAt", FieldValue.serverTimestamp());
-
-            DocumentReference gameRef = db.collection("blackjack_sessions").document(gameId);
-            transaction.set(gameRef, session);
-
-            transaction.update(userRef, "activeGameId", gameId);
-
-            return session;
-        }).get();
-    }
-
-    public Map<String, Object> hit(String uid) throws Exception {
-
-        return db.runTransaction(transaction -> {
-
-            DocumentReference userRef = db.collection("users").document(uid);
-            DocumentSnapshot userDoc = transaction.get(userRef).get();
-
-            String gameId = userDoc.getString("activeGameId");
-            if (gameId == null) {
-                throw new RuntimeException("No active game");
-            }
-
-            DocumentReference gameRef = db.collection("blackjack_sessions").document(gameId);
-            DocumentSnapshot gameDoc = transaction.get(gameRef).get();
-
-            if (!gameDoc.exists()) {
-                throw new RuntimeException("Game session missing");
-            }
-
-            if (!uid.equals(gameDoc.getString("uid"))) {
-                throw new RuntimeException("Unauthorized game access");
-            }
-
-            String status = gameDoc.getString("status");
-            if (!"PLAYER_TURN".equals(status)) {
-                throw new RuntimeException("Not player's turn");
-            }
-
-            List<String> deck = (List<String>) gameDoc.get("deck");
-            List<Map<String, Object>> hands =
-                    (List<Map<String, Object>>) gameDoc.get("playerHands");
-
-            int activeHandIndex = ((Long) gameDoc.get("activeHandIndex")).intValue();
-
-            Map<String, Object> currentHand = hands.get(activeHandIndex);
-            List<String> cards = (List<String>) currentHand.get("cards");
-
-            // Draw card
-            cards.add(deck.remove(0));
-
-            int value = com.cnx.onyxbackend.util.HandUtil.calculateHandValue(cards);
-
-            // If bust → move to next hand or dealer
-            if (value > 21) {
-
-                if (activeHandIndex + 1 < hands.size()) {
-                    activeHandIndex++;
-                } else {
-                    transaction.update(gameRef, "status", "DEALER_TURN");
-                }
-            }
-
-            transaction.update(gameRef, Map.of(
-                    "deck", deck,
-                    "playerHands", hands,
-                    "activeHandIndex", activeHandIndex
-            ));
-
-            // Update local session map manually
-            Map<String, Object> updatedSession = gameDoc.getData();
-            updatedSession.put("deck", deck);
-            updatedSession.put("playerHands", hands);
-            updatedSession.put("activeHandIndex", activeHandIndex);
-
-            if ("DEALER_TURN".equals(status)) {
-                updatedSession.put("status", "DEALER_TURN");
-            }
-
-            return updatedSession;
-        }).get();
-    }
-
-    public Map<String, Object> stand(String uid) throws Exception {
-
-        return db.runTransaction(transaction -> {
-
-            DocumentReference userRef = db.collection("users").document(uid);
-            DocumentSnapshot userDoc = transaction.get(userRef).get();
-
-            String gameId = userDoc.getString("activeGameId");
-            if (gameId == null) {
-                throw new RuntimeException("No active game");
-            }
-
-            DocumentReference gameRef = db.collection("blackjack_sessions").document(gameId);
-            DocumentSnapshot gameDoc = transaction.get(gameRef).get();
-
-            if (!gameDoc.exists()) {
-                throw new RuntimeException("Game not found");
-            }
-
-            if (!uid.equals(gameDoc.getString("uid"))) {
-                throw new RuntimeException("Unauthorized");
-            }
-
-            List<Map<String, Object>> hands = (List<Map<String, Object>>) gameDoc.get("playerHands");
-            int activeHandIndex = gameDoc.get("activeHandIndex") != null ? ((Long) gameDoc.get("activeHandIndex")).intValue() : 0;
-
-            // ---- HANDLE SPLIT STANDS FIRST ----
-            // If they stand, but there is another hand (like after a split), advance to the next hand instead of ending the game.
-            if (activeHandIndex + 1 < hands.size()) {
-                int nextIndex = activeHandIndex + 1;
-                transaction.update(gameRef, "activeHandIndex", nextIndex);
-                
-                // Return updated active index without playing dealer/ending game
-                Map<String, Object> result = new HashMap<>(gameDoc.getData());
-                result.put("activeHandIndex", nextIndex);
-                return result; 
-            }
-
-            // ---- IT IS THE LAST HAND, RESOLVE GAME AND DEALER PLAY ----
-            List<String> deck = (List<String>) gameDoc.get("deck");
-            List<String> dealerHand = (List<String>) gameDoc.get("dealerHand");
-
+        if (playerBJ || dealerBJ) {
+            session.setStatus(GameStatus.FINISHED.name());
             double totalPayout = 0;
+            
+            if (playerBJ && !dealerBJ) {
+                totalPayout = bet * 2.5; // 3:2 Casino Payout
+            } else if (playerBJ && dealerBJ) {
+                totalPayout = bet; // Push
+            } // If dealerBJ and !playerBJ, payout is 0
 
-            while (com.cnx.onyxbackend.util.HandUtil.calculateHandValue(dealerHand) < 17) {
-                dealerHand.add(deck.remove(0));
-            }
+            user.setBalance(user.getBalance() + totalPayout);
+            userRepository.save(user);
+            
+            // Return finished state immediately without saving an active session to DB
+            return buildSessionResponse(session, totalPayout, user);
+        }
 
-            int dealerValue = com.cnx.onyxbackend.util.HandUtil.calculateHandValue(dealerHand);
+        // If no instant blackjack, proceed normally
+        session.setStatus(GameStatus.PLAYER_TURN.name());
+        sessionRepository.save(session);
+        user.setActiveGameId(session.getId());
+        userRepository.save(user);
 
-            for (Map<String, Object> hand : hands) {
-
-                List<String> cards = (List<String>) hand.get("cards");
-                double bet = ((Number) hand.get("bet")).doubleValue();
-
-                int playerValue = com.cnx.onyxbackend.util.HandUtil.calculateHandValue(cards);
-                boolean isBlackjack = cards.size() == 2 && playerValue == 21;
-
-                if (playerValue > 21) {
-                    continue; // bust
-                }
-
-                if (isBlackjack && dealerValue != 21) {
-                    totalPayout += bet * 2.5;
-                    continue;
-                }
-
-                if (dealerValue > 21 || playerValue > dealerValue) {
-                    totalPayout += bet * 2;
-                } else if (playerValue == dealerValue) {
-                    totalPayout += bet;
-                }
-            }
-
-            String walletId = gameDoc.getString("walletId");
-            DocumentReference walletRef = db.collection("wallets").document(walletId);
-            DocumentSnapshot walletDoc = transaction.get(walletRef).get();
-
-            double balance = walletDoc.getDouble("balance");
-            transaction.update(walletRef, "balance", balance + totalPayout);
-            transaction.update(userRef, "activeGameId", null);
-            transaction.delete(gameRef);
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("dealerHand", dealerHand);
-            result.put("payout", totalPayout);
-
-            return result;
-
-        }).get();
+        return buildSessionResponse(session, 0, user);
     }
 
-    public Map<String, Object> split(String uid) throws Exception {
+    @Transactional
+    public BlackjackResponseDTO hit(String uid) throws Exception {
+        User user = userRepository.findByIdForUpdate(uid).orElseThrow();
+        BlackjackSession session = sessionRepository.findById(user.getActiveGameId())
+                .orElseThrow(() -> new RuntimeException("No active game"));
 
-        return db.runTransaction(transaction -> {
+        if (!"PLAYER_TURN".equals(session.getStatus())) throw new RuntimeException("Not player's turn");
 
-            DocumentReference userRef = db.collection("users").document(uid);
-            DocumentSnapshot userDoc = transaction.get(userRef).get();
+        PlayerHand currentHand = session.getPlayerHands().get(session.getActiveHandIndex());
+        currentHand.getCards().add(session.getDeck().remove(0));
 
-            String gameId = userDoc.getString("activeGameId");
-            if (gameId == null) {
-                throw new RuntimeException("No active game");
-            }
-
-            DocumentReference gameRef = db.collection("blackjack_sessions").document(gameId);
-            DocumentSnapshot gameDoc = transaction.get(gameRef).get();
-
-            List<String> deck = (List<String>) gameDoc.get("deck");
-            List<Map<String, Object>> hands =
-                    (List<Map<String, Object>>) gameDoc.get("playerHands");
-
-            if (hands.size() > 1) {
-                throw new RuntimeException("Already split");
-            }
-
-            Map<String, Object> firstHand = hands.get(0);
-            List<String> cards = (List<String>) firstHand.get("cards");
-            double bet = ((Number) firstHand.get("bet")).doubleValue();
-
-            if (cards.size() != 2) {
-                throw new RuntimeException("Split only allowed on first two cards");
-            }
-
-            String rank1 = cards.get(0).substring(0, cards.get(0).length() - 1);
-            String rank2 = cards.get(1).substring(0, cards.get(1).length() - 1);
-
-            if (!rank1.equals(rank2)) {
-                throw new RuntimeException("Cards must be same rank to split");
-            }
-
-            // ---- WALLET CHECK ----
-            String walletId = gameDoc.getString("walletId");
-            DocumentReference walletRef = db.collection("wallets").document(walletId);
-            DocumentSnapshot walletDoc = transaction.get(walletRef).get();
-
-            double balance = walletDoc.getDouble("balance");
-
-            if (balance < bet) {
-                throw new RuntimeException("Insufficient balance to split");
-            }
-
-            Double rakeRateObj = userDoc.getDouble("rakebackRate");
-            Double totalWageredObj = userDoc.getDouble("totalWagered");
-            Double rakeAvailableObj = userDoc.getDouble("rakebackAvailable");
-
-            double rakeRate = rakeRateObj != null ? rakeRateObj : 0.01;
-            double totalWagered = totalWageredObj != null ? totalWageredObj : 0.0;
-            double rakeAvailable = rakeAvailableObj != null ? rakeAvailableObj : 0.0;
-
-            double rakeEarned = bet * rakeRate;
-
-            System.out.println("Rake earned: " + rakeEarned);
-            System.out.println("Total wagered after: " + (totalWagered + bet));
-            System.out.println("Rake available after: " + (rakeAvailable + rakeEarned));
-
-
-            transaction.update(userRef, Map.of(
-                "totalWagered", totalWagered + bet,
-                "rakebackAvailable", rakeAvailable + rakeEarned
-            ));
-
-            // Create two hands
-            List<String> hand1Cards = new ArrayList<>();
-            List<String> hand2Cards = new ArrayList<>();
-
-            hand1Cards.add(cards.get(0));
-            hand2Cards.add(cards.get(1));
-
-            hand1Cards.add(deck.remove(0));
-            hand2Cards.add(deck.remove(0));
-
-            Map<String, Object> hand1 = new HashMap<>();
-            hand1.put("cards", hand1Cards);
-            hand1.put("bet", bet);
-            hand1.put("doubled", false);
-
-            Map<String, Object> hand2 = new HashMap<>();
-            hand2.put("cards", hand2Cards);
-            hand2.put("bet", bet);
-            hand2.put("doubled", false);
-
-            List<Map<String, Object>> newHands = new ArrayList<>();
-            newHands.add(hand1);
-            newHands.add(hand2);
-
-            transaction.update(gameRef, Map.of(
-                    "deck", deck,
-                    "playerHands", newHands,
-                    "activeHandIndex", 0
-            ));
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("playerHands", newHands);
-
-            return result;
-
-        }).get();
-    }
-
-    public Map<String, Object> doubleDown(String uid) throws Exception {
-
-        return db.runTransaction(transaction -> {
-
-            DocumentReference userRef = db.collection("users").document(uid);
-            DocumentSnapshot userDoc = transaction.get(userRef).get();
-
-            String gameId = userDoc.getString("activeGameId");
-            if (gameId == null) {
-                throw new RuntimeException("No active game");
-            }
-
-            DocumentReference gameRef = db.collection("blackjack_sessions").document(gameId);
-            DocumentSnapshot gameDoc = transaction.get(gameRef).get();
-
-            List<String> deck = (List<String>) gameDoc.get("deck");
-            List<Map<String, Object>> hands =
-                    (List<Map<String, Object>>) gameDoc.get("playerHands");
-
-            int activeHandIndex = ((Long) gameDoc.get("activeHandIndex")).intValue();
-            Map<String, Object> currentHand = hands.get(activeHandIndex);
-
-            List<String> cards = (List<String>) currentHand.get("cards");
-            double bet = ((Number) currentHand.get("bet")).doubleValue();
-            Boolean doubled = (Boolean) currentHand.get("doubled");
-
-            if (cards.size() != 2) {
-                throw new RuntimeException("Double only allowed on first two cards");
-            }
-
-            if (Boolean.TRUE.equals(doubled)) {
-                throw new RuntimeException("Already doubled");
-            }
-
-            // ---- WALLET CHECK ----
-            String walletId = gameDoc.getString("walletId");
-            DocumentReference walletRef = db.collection("wallets").document(walletId);
-            DocumentSnapshot walletDoc = transaction.get(walletRef).get();
-
-            double balance = walletDoc.getDouble("balance");
-
-            if (balance < bet) {
-                throw new RuntimeException("Insufficient balance for double");
-            }
-
-            // Deduct extra bet
-            Double rakeRateObj = userDoc.getDouble("rakebackRate");
-            Double totalWageredObj = userDoc.getDouble("totalWagered");
-            Double rakeAvailableObj = userDoc.getDouble("rakebackAvailable");
-
-            double rakeRate = rakeRateObj != null ? rakeRateObj : 0.01;
-            double totalWagered = totalWageredObj != null ? totalWageredObj : 0.0;
-            double rakeAvailable = rakeAvailableObj != null ? rakeAvailableObj : 0.0;
-
-            double rakeEarned = bet * rakeRate;
-
-            System.out.println("Rake earned: " + rakeEarned);
-            System.out.println("Total wagered after: " + (totalWagered + bet));
-            System.out.println("Rake available after: " + (rakeAvailable + rakeEarned));
-
-            transaction.update(userRef, Map.of(
-                "totalWagered", totalWagered + bet,
-                "rakebackAvailable", rakeAvailable + rakeEarned
-            ));
-
-            // Update hand
-            currentHand.put("bet", bet * 2);
-            currentHand.put("doubled", true);
-
-            // Draw one card
-            cards.add(deck.remove(0));
-
-            int value =
-                    com.cnx.onyxbackend.util.HandUtil.calculateHandValue(cards);
-
-            // Move to next hand or dealer turn
-            if (activeHandIndex + 1 < hands.size()) {
-                activeHandIndex++;
+        if (currentHand.isBust()) {
+            if (session.getActiveHandIndex() + 1 < session.getPlayerHands().size()) {
+                session.setActiveHandIndex(session.getActiveHandIndex() + 1);
             } else {
-                transaction.update(gameRef, "status", "DEALER_TURN");
+                session.setStatus("DEALER_TURN");
             }
+        }
 
-            transaction.update(gameRef, Map.of(
-                    "deck", deck,
-                    "playerHands", hands,
-                    "activeHandIndex", activeHandIndex
-            ));
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("playerHands", hands);
-            result.put("activeHandIndex", activeHandIndex);
-
-            return result;
-
-        }).get();
+        sessionRepository.save(session);
+        return buildSessionResponse(session, 0, user);
     }
 
-    public Map<String, Object> claimRakeback(String uid) throws Exception {
+    @Transactional
+    public BlackjackResponseDTO stand(String uid) throws Exception {
 
-        return db.runTransaction(transaction -> {
+        User user = userRepository.findByIdForUpdate(uid).orElseThrow();
+        BlackjackSession session = sessionRepository
+                .findById(user.getActiveGameId())
+                .orElseThrow(() -> new RuntimeException("No active game"));
 
-            DocumentReference userRef = db.collection("users").document(uid);
-            DocumentReference walletRef;
+        System.out.println("Dealer initial: " + session.getDealerHand());
+        System.out.println("Player hands: " + session.getPlayerHands());
+        
+        // If more split hands → just move index
+        if (session.getActiveHandIndex() + 1 < session.getPlayerHands().size()) {
+            session.setActiveHandIndex(session.getActiveHandIndex() + 1);
+            sessionRepository.save(session);
+            return buildSessionResponse(session, 0, user);
+        }
 
-            DocumentSnapshot userDoc = transaction.get(userRef).get();
+        // ---- DEALER PLAY ----
+        boolean allBusted = session.getPlayerHands().stream()
+        .allMatch(hand -> HandUtil.calculateHandValue(hand.getCards()) > 21);
 
-            Double rakeAvailableObj = userDoc.getDouble("rakebackAvailable");
-            Double rakeClaimedObj = userDoc.getDouble("rakebackClaimed");
-            String walletId = userDoc.getString("walletId");
+        List<String> dealerHand = session.getDealerHand();
+        List<String> deck = session.getDeck();
+        int dealerValue = HandUtil.calculateHandValue(dealerHand);
 
-            if (walletId == null) {
-                throw new RuntimeException("Wallet not found");
+        if (!allBusted) {
+            DealerUtil.playDealer(dealerHand, deck);
+            dealerValue = HandUtil.calculateHandValue(dealerHand);
+        }
+
+        // ---- PAYOUT CALC ----
+        double totalPayout = 0;
+
+        for (PlayerHand hand : session.getPlayerHands()) {
+
+            int playerValue = HandUtil.calculateHandValue(hand.getCards());
+            boolean isBlackjack = hand.getCards().size() == 2 && playerValue == 21;
+
+            System.out.println("----");
+            System.out.println("Cards: " + hand.getCards());
+            System.out.println("PlayerValue: " + playerValue);
+            System.out.println("DealerValue: " + dealerValue);
+            System.out.println("IsBlackjack: " + isBlackjack);
+
+            if (playerValue > 21) continue;
+
+            if (isBlackjack && dealerValue != 21) {
+                totalPayout += hand.getBet() * 2.5;
+            } else if (dealerValue > 21 || playerValue > dealerValue) {
+                totalPayout += hand.getBet() * 2;
+            } else if (playerValue == dealerValue) {
+                totalPayout += hand.getBet();
             }
+        }
 
-            walletRef = db.collection("wallets").document(walletId);
-            DocumentSnapshot walletDoc = transaction.get(walletRef).get();
+        System.out.println("Dealer final: " + dealerHand + " = " + dealerValue);
+        System.out.println("Total payout: " + totalPayout);
 
-            double rakeAvailable = rakeAvailableObj != null ? rakeAvailableObj : 0.0;
+        // ---- APPLY MONEY ----
+        user.setBalance(user.getBalance() + totalPayout);
+        user.setActiveGameId(null);
 
-            // 🔥 1. Calculate the whole dollars to claim, and the cents to leave behind
-            double amountToClaim = Math.floor(rakeAvailable); // e.g., 5.75 becomes 5.0
-            double leftoverCents = rakeAvailable - amountToClaim; // e.g., 5.75 - 5.0 becomes 0.75
+        session.setStatus(GameStatus.FINISHED.name());
 
-            // 🔥 2. Check if they have at least 1 full dollar to claim
-            if (amountToClaim < 1.0) {
-                throw new RuntimeException("You need at least $1.00 to claim rakeback.");
-            }
+        userRepository.save(user);
+        sessionRepository.delete(session);
 
-            double rakeClaimed = rakeClaimedObj != null ? rakeClaimedObj : 0.0;
-            double balance = walletDoc.getDouble("balance");
+        return buildSessionResponse(session, totalPayout, user);
+    }
 
-            // 🔥 3. Only add the whole dollars to the wallet balance
-            transaction.update(walletRef, "balance", balance + amountToClaim);
+    @Transactional
+    public BlackjackResponseDTO doubleDown(String uid) throws Exception {
+        User user = userRepository.findByIdForUpdate(uid).orElseThrow();
+        BlackjackSession session = sessionRepository.findById(user.getActiveGameId()).orElseThrow();
 
-            // 🔥 4. Update the database: Leave the cents, add dollars to the total claimed
-            transaction.update(userRef, Map.of(
-                    "rakebackAvailable", leftoverCents,
-                    "rakebackClaimed", rakeClaimed + amountToClaim
-            ));
+        PlayerHand currentHand = session.getPlayerHands().get(session.getActiveHandIndex());
+        double bet = currentHand.getBet();
 
-            Map<String, Object> result = new HashMap<>();
-            result.put("claimed", amountToClaim);
+        if (currentHand.getCards().size() != 2) throw new RuntimeException("Only on first two cards");
+        if (currentHand.isDoubled()) throw new RuntimeException("Already doubled");
+        if (user.getBalance() < bet) throw new RuntimeException("Insufficient balance");
 
-            return result;
+        // Math
+        double rakeEarned = bet * user.getRakebackRate();
+        user.setBalance(user.getBalance() - bet);
+        user.setTotalWagered(user.getTotalWagered() + bet);
+        user.setRakebackAvailable(user.getRakebackAvailable() + rakeEarned);
 
-        }).get();
+        // Update Hand
+        currentHand.setBet(bet * 2);
+        currentHand.setDoubled(true);
+        currentHand.getCards().add(session.getDeck().remove(0));
+
+        if (session.getActiveHandIndex() + 1 < session.getPlayerHands().size()) {
+            session.setActiveHandIndex(session.getActiveHandIndex() + 1);
+        } else {
+            session.setStatus("DEALER_TURN");
+        }
+
+        userRepository.save(user);
+        sessionRepository.save(session);
+        return buildSessionResponse(session, 0, user);
+    }
+
+    @Transactional
+    public BlackjackResponseDTO split(String uid) throws Exception {
+        User user = userRepository.findByIdForUpdate(uid).orElseThrow();
+        BlackjackSession session = sessionRepository.findById(user.getActiveGameId()).orElseThrow();
+
+        if (session.getPlayerHands().size() > 1)
+            throw new RuntimeException("Already split");
+
+        PlayerHand originalHand = session.getPlayerHands().get(0);
+        double bet = originalHand.getBet();
+
+        if (originalHand.getCards().size() != 2)
+            throw new RuntimeException("Can only split with 2 cards");
+
+        String rank1 = originalHand.getCards().get(0).substring(0, originalHand.getCards().get(0).length() - 1);
+        String rank2 = originalHand.getCards().get(1).substring(0, originalHand.getCards().get(1).length() - 1);
+
+        if (!rank1.equals(rank2))
+            throw new RuntimeException("Cards must be same rank");
+
+        if (user.getBalance() < bet)
+            throw new RuntimeException("Insufficient balance");
+
+        // Deduct second bet
+        double rakeEarned = bet * user.getRakebackRate();
+        user.setBalance(user.getBalance() - bet);
+        user.setTotalWagered(user.getTotalWagered() + bet);
+        user.setRakebackAvailable(user.getRakebackAvailable() + rakeEarned);
+
+        // Create two hands
+        String card1 = originalHand.getCards().get(0);
+        String card2 = originalHand.getCards().get(1);
+
+        PlayerHand hand1 = new PlayerHand();
+        hand1.setBet(bet);
+        hand1.setCards(new ArrayList<>(List.of(card1)));
+
+        PlayerHand hand2 = new PlayerHand();
+        hand2.setBet(bet);
+        hand2.setCards(new ArrayList<>(List.of(card2)));
+
+        // Deal one card to each hand immediately
+        hand1.getCards().add(session.getDeck().remove(0));
+        hand2.getCards().add(session.getDeck().remove(0));
+
+        session.getPlayerHands().clear();
+        session.getPlayerHands().add(hand1);
+        session.getPlayerHands().add(hand2);
+        session.setActiveHandIndex(0);
+
+        userRepository.save(user);
+        sessionRepository.save(session);
+
+        return buildSessionResponse(session, 0, user);
+    }
+
+    @Transactional
+    public Map<String, Double> claimRakeback(String uid) throws Exception {
+        // 🔥 FIXED: Changed return type in header from BlackjackResponseDTO to Map<String, Double>
+        User user = userRepository.findByIdForUpdate(uid).orElseThrow();
+
+        double amountToClaim = Math.floor(user.getRakebackAvailable());
+        if (amountToClaim < 1.0) throw new RuntimeException("You need at least $1.00 to claim.");
+
+        user.setBalance(user.getBalance() + amountToClaim);
+        user.setRakebackAvailable(user.getRakebackAvailable() - amountToClaim);
+        user.setRakebackClaimed(user.getRakebackClaimed() + amountToClaim);
+
+        userRepository.save(user);
+        return Map.of("claimed", amountToClaim);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<BlackjackResponseDTO> getActiveSession(String uid) {
+        User user = userRepository.findById(uid).orElseThrow();
+
+        if (user.getActiveGameId() == null) {
+            return Optional.empty();
+        }
+
+        String activeGameId = user.getActiveGameId();
+
+        if (activeGameId == null) {
+            throw new RuntimeException("No active game");
+        }
+
+        BlackjackSession session = sessionRepository
+            .findById(user.getActiveGameId())
+            .orElseThrow(() -> new RuntimeException("No active game"));
+
+            return Optional.of(buildSessionResponse(session, user));
+    }
+
+    // Helper method to keep frontend mapping identical to Firestore output
+    private BlackjackResponseDTO buildSessionResponse(
+            BlackjackSession session,
+            double payout,
+            User user
+    ) {
+
+        var handDTOs = session.getPlayerHands()
+                .stream()
+                .map(h -> new PlayerHandDTO(
+                        h.getCards(),
+                        h.getBet(),
+                        h.isDoubled()))
+                .toList();
+
+        return new BlackjackResponseDTO(
+                session.getUid(),
+                session.getBetAmount(),
+                session.getDealerHand(),
+                session.getActiveHandIndex(),
+                session.getStatus(),
+                handDTOs,
+                payout,
+                user.getBalance(),
+                user.getRakebackAvailable()
+        );
+    }
+
+    private BlackjackResponseDTO buildSessionResponse(
+            BlackjackSession session,
+            User user
+    ) {
+        return buildSessionResponse(session, 0, user);
     }
 }
+
+
+
+

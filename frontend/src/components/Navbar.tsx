@@ -68,7 +68,7 @@ export const Navbar = () => {
             disabled={rakeback < CLAIM_THRESHOLD}
             onClick={async () => {
               try {
-                const res = await fetch("https://onyxbackend.share.zrok.io/api/blackjack/claim-rakeback", {
+                const res = await fetch("https://onyxbackend.share.zrok.io/api/user/claim-rakeback", {
                   method: "POST",
                   headers: {
                     "Content-Type": "application/json",

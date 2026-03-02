@@ -23,7 +23,7 @@ export const Footer = () => {
           <div className="flex flex-col md:items-end">
             <h3 className="text-white font-bold mb-4 uppercase text-xs tracking-wider">Games</h3>
             <ul className="flex flex-wrap gap-6 text-sm text-gray-400">
-              {['Table Games', 'Slots', 'EarnBet', 'Lottery', 'Crash'].map((item) => (
+              {['Table Games', 'Slots', 'Lottery', 'Crash'].map((item) => (
                 <li key={item}>
                   <a href="#" className="hover:text-[#007AFF] transition-colors">{item}</a>
                 </li>

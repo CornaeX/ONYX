@@ -50,9 +50,18 @@ public class HandUtil {
             }
         }
 
-        total = calculateHandValue(hand);
+        int hardTotal = 0;
+        for (String card : hand) {
+            String rank = card.substring(0, card.length() - 1);
+            if (rank.equals("A")) {
+                hardTotal += 1;
+            } else if (rank.equals("J") || rank.equals("Q") || rank.equals("K")) {
+                hardTotal += 10;
+            } else {
+                hardTotal += Integer.parseInt(rank);
+            }
+        }
 
-        // Soft if there was at least one ace counted as 11
-        return aceCount > 0 && total <= 21;
+        return aceCount > 0 && hardTotal + 10 <= 21;
     }
 }

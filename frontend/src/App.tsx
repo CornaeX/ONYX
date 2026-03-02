@@ -8,6 +8,9 @@ import { fetchProfile } from './services/userService';
 // 1. These are NAMED exports (Keep the curly braces)
 import { Home } from './pages/Home';
 import { Blackjack } from './pages/games/blackjack/Blackjack';
+import { LuckyCard } from './pages/games/luckycard/LuckyCard';
+import { SlotV1 } from './pages/games/slotv1/SlotV1';
+import { Crash } from "./pages/games/Crash/Crash";
 
 // 2. These are DEFAULT exports (Remove the curly braces)
 import Login from './pages/Login';
@@ -59,6 +62,9 @@ function App() {
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/blackjack" element={<Blackjack />} />
+        <Route path="/luckycard" element={<LuckyCard />} />
+        <Route path="/slotv1" element={<SlotV1 />} />
+        <Route path="/crash" element={<Crash />} />
       </Route>
 
       <Route element={<BankLayout />}>

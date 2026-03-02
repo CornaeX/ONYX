@@ -1,0 +1,965 @@
+package com.cnx.onyxbackend.controller;
+
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/api/admin")
+public class AdminController {
+
+    @GetMapping("/dashboard")
+    public String adminOnly() {
+        return "Admin Access Granted";
+    }
+}
+
+package com.cnx.onyxbackend.controller;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.cnx.onyxbackend.model.User;
+import com.cnx.onyxbackend.service.AuthService;
+
+@RestController
+@RequestMapping("/api/auth")
+@CrossOrigin(origins = "*")
+public class AuthController {
+
+    private final AuthService authService;
+
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<?> register(
+            @RequestHeader("Authorization") String authHeader
+    ) {
+        try {
+            // 1. Extract the token
+            String token = authHeader.replace("Bearer ", "");
+            
+            // 2. Verify token and save the user to PostgreSQL (Wallet is included inside User!)
+            User savedUser = authService.getOrCreateUserFromToken(token);
+
+            // 3. Return success
+            return ResponseEntity.ok(savedUser);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body("Registration failed: " + e.getMessage());
+        }
+    }
+}
+
+package com.cnx.onyxbackend.controller;
+
+import java.util.Map;
+
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.cnx.onyxbackend.service.BlackjackService;
+
+@RestController
+@RequestMapping("/api/blackjack")
+public class BlackjackController {
+
+    private final BlackjackService blackjackService;
+
+    public BlackjackController(BlackjackService blackjackService) {
+        this.blackjackService = blackjackService;
+    }
+
+    // 1️⃣ START GAME
+    @PostMapping("/start")
+    public Map<String, Object> startGame(
+            @AuthenticationPrincipal String uid,
+            @RequestBody Map<String, Double> request
+    ) throws Exception {
+
+        double bet = request.get("bet");
+
+        return blackjackService.startGame(uid, bet);
+    }
+
+    // 2️⃣ HIT
+    @PostMapping("/hit")
+    public Map<String, Object> hit(
+            @AuthenticationPrincipal String uid
+    ) throws Exception {
+
+        return blackjackService.hit(uid);
+    }
+
+    // 3️⃣ STAND
+    @PostMapping("/stand")
+    public Map<String, Object> stand(
+            @AuthenticationPrincipal String uid
+    ) throws Exception {
+
+        return blackjackService.stand(uid);
+    }
+
+    // 4️⃣ SPLIT
+    @PostMapping("/split")
+    public Map<String, Object> split(
+            @AuthenticationPrincipal String uid
+    ) throws Exception {
+
+        return blackjackService.split(uid);
+    }
+
+    // 5️⃣ DOUBLE
+    @PostMapping("/double")
+    public Map<String, Object> doubleDown(
+            @AuthenticationPrincipal String uid
+    ) throws Exception {
+
+        return blackjackService.doubleDown(uid);
+    }
+
+    @PostMapping("/claim-rakeback")
+    public Map<String, Object> claimRakeback(
+            @AuthenticationPrincipal String uid
+    ) throws Exception {
+
+        return blackjackService.claimRakeback(uid);
+    }
+}
+
+package com.cnx.onyxbackend.controller;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.cnx.onyxbackend.model.User;
+import com.cnx.onyxbackend.repository.UserRepository;
+import com.cnx.onyxbackend.service.TransactionService;
+
+@RestController
+@RequestMapping("/api/user")
+public class UserController {
+
+    private final UserRepository userRepository;
+    private final TransactionService transactionService;
+
+    // Inject our new PostgreSQL Repository and Transaction Service
+    public UserController(UserRepository userRepository, TransactionService transactionService) {
+        this.userRepository = userRepository;
+        this.transactionService = transactionService;
+    }
+
+    @GetMapping("/profile")
+    public ResponseEntity<?> getProfile(Authentication authentication) {
+        try {
+            // Get the Firebase UID from the security token
+            String uid = authentication.getName();
+
+            // Fetch the user directly from PostgreSQL
+            User user = userRepository.findById(uid)
+                    .orElseThrow(() -> new RuntimeException("User not found in database"));
+
+            // Build the response exactly how the frontend expects it
+            Map<String, Object> response = new HashMap<>();
+            response.put("uid", user.getUid());
+            response.put("username", user.getEmail());
+            response.put("role", "USER");
+            response.put("balance", user.getBalance());
+            response.put("rakeback", user.getRakebackAvailable());
+
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.status(403).body("Error fetching profile: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/deposit")
+    public ResponseEntity<?> deposit(
+            Authentication authentication,
+            @RequestBody Map<String, Double> body
+    ) {
+        try {
+            String uid = authentication.getName();
+            double amount = body.get("amount");
+
+            // Use the TransactionService we updated earlier!
+            User updatedUser = transactionService.deposit(uid, amount);
+
+            return ResponseEntity.ok(Map.of("balance", updatedUser.getBalance()));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body("Deposit failed: " + e.getMessage());
+        }
+    }
+
+    @PostMapping("/withdraw")
+    public ResponseEntity<?> withdraw(
+            Authentication authentication,
+            @RequestBody Map<String, Double> body
+    ) {
+        try {
+            String uid = authentication.getName();
+            double amount = body.get("amount");
+
+            // Use the TransactionService we updated earlier!
+            User updatedUser = transactionService.withdraw(uid, amount);
+
+            return ResponseEntity.ok(Map.of("balance", updatedUser.getBalance()));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.badRequest().body("Withdrawal failed: " + e.getMessage());
+        }
+    }
+}
+
+package com.cnx.onyxbackend.model;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.Data;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+
+@Entity
+@Table(name = "blackjack_sessions")
+@Data
+public class BlackjackSession {
+
+    @Id
+    private String id; // We will use UUID here
+
+    private String uid;
+    private double betAmount;
+    private int activeHandIndex = 0;
+    private String status;
+    private Instant createdAt = Instant.now();
+
+    // The Magic: This tells Hibernate to save these arrays as Postgres JSONB!
+    @JdbcTypeCode(SqlTypes.JSON)
+    private List<String> deck = new ArrayList<>();
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    private List<String> dealerHand = new ArrayList<>();
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    private List<PlayerHand> playerHands = new ArrayList<>();
+}
+
+package com.cnx.onyxbackend.model;
+
+public enum GameStatus {
+    PLAYER_TURN,
+    DEALER_TURN,
+    FINISHED
+}
+
+package com.cnx.onyxbackend.model;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+@Data
+@NoArgsConstructor  // Jackson needs this to create the object from JSON!
+@AllArgsConstructor
+public class PlayerHand implements Serializable {
+    private List<String> cards = new ArrayList<>();
+    private double bet;
+    private boolean doubled;
+}
+
+package com.cnx.onyxbackend.model;
+
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
+import lombok.Data;
+
+@Entity
+@Table(name = "users")
+@Data // Lombok annotation: auto-generates Getters, Setters, and Constructors
+public class User {
+
+    // The ID is now a String to match the Firebase Auth UID
+    @Id
+    private String uid; 
+
+    private String email;
+    private double balance = 0.0;
+    
+    // Blackjack & Rakeback Stats
+    private double totalWagered = 0.0;
+    private double rakebackAvailable = 0.0;
+    private double rakebackClaimed = 0.0;
+    private double rakebackRate = 0.01; // Example: 1% rakeback
+    
+    private String activeGameId;
+}
+
+package com.cnx.onyxbackend.repository;
+
+import com.cnx.onyxbackend.model.BlackjackSession;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+@Repository
+public interface BlackjackSessionRepository extends JpaRepository<BlackjackSession, String> {
+}
+
+package com.cnx.onyxbackend.repository;
+
+import com.cnx.onyxbackend.model.User;
+import jakarta.persistence.LockModeType;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
+
+import java.util.Optional;
+
+@Repository
+public interface UserRepository extends JpaRepository<User, String> { // Changed to String
+
+    // PESSIMISTIC_WRITE locks the row so bets/deposits are mathematically safe
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT u FROM User u WHERE u.uid = :uid") // Changed to u.uid
+    Optional<User> findByIdForUpdate(@Param("uid") String uid); // Changed to String
+}
+
+package com.cnx.onyxbackend.security;
+
+import java.io.IOException;
+import java.util.List;
+
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.stereotype.Component;
+import org.springframework.web.filter.OncePerRequestFilter;
+
+import com.google.cloud.firestore.DocumentSnapshot;
+import com.google.cloud.firestore.Firestore;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseToken;
+import com.google.firebase.cloud.FirestoreClient;
+
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+@Component
+public class FirebaseAuthenticationFilter extends OncePerRequestFilter {
+
+    @Override
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain
+    ) throws ServletException, IOException {
+
+        String header = request.getHeader("Authorization");
+
+        if (header != null && header.startsWith("Bearer ")) {
+
+            String token = header.replace("Bearer ", "");
+
+            try {
+
+                FirebaseToken decodedToken =
+                        FirebaseAuth.getInstance().verifyIdToken(token);
+
+                String uid = decodedToken.getUid();
+
+                Firestore db = FirestoreClient.getFirestore();
+                DocumentSnapshot userDoc =
+                        db.collection("users").document(uid).get().get();
+
+                String role = userDoc.getString("role");
+
+                List<GrantedAuthority> authorities =
+                        List.of(new SimpleGrantedAuthority("ROLE_" + role));
+
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(uid, null, authorities);
+
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+
+            } catch (Exception e) {
+                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                return;
+            }
+        }
+
+        filterChain.doFilter(request, response);
+    }
+}
+
+package com.cnx.onyxbackend.security;
+
+import java.util.List;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    private final FirebaseAuthenticationFilter firebaseFilter;
+
+    public SecurityConfig(FirebaseAuthenticationFilter firebaseFilter) {
+        this.firebaseFilter = firebaseFilter;
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
+        http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource())) 
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth
+                // 🔥 1. MUST PERMIT ALL OPTIONS REQUESTS FOR CORS PREFLIGHT TO WORK
+                .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll() 
+                
+                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                .requestMatchers("/api/user/**").authenticated() // Changed to authenticated temporarily
+                
+                // 🔥 2. Changed to authenticated() in case your filter doesn't apply ROLE_USER
+                .requestMatchers("/api/blackjack/**").authenticated() 
+                
+                .anyRequest().authenticated()
+            )
+            .addFilterBefore(firebaseFilter, UsernamePasswordAuthenticationFilter.class);
+
+        return http.build();
+    }
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        configuration.setAllowCredentials(true);
+        // 🔥 3. Browsers often reject AllowCredentials(true) if combined with wildcard "*".
+        // Stick to specific allowed origins.
+        configuration.setAllowedOrigins(List.of(
+            "http://localhost:5173", 
+            "http://127.0.0.1:5173",
+            "https://onyx.share.zrok.io" // Add production URL here later
+        ));
+        configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+
+        return source;
+    }
+}
+
+package com.cnx.onyxbackend.service;
+
+import com.cnx.onyxbackend.model.User;
+import com.cnx.onyxbackend.repository.UserRepository;
+import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.auth.FirebaseToken;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import java.util.Optional;
+
+@Service
+public class AuthService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    public FirebaseToken verifyToken(String token) throws Exception {
+        return FirebaseAuth.getInstance().verifyIdToken(token);
+    }
+
+    // Call this from your AuthController when a user registers or logs in
+    public User getOrCreateUserFromToken(String token) throws Exception {
+        FirebaseToken decodedToken = verifyToken(token);
+        String uid = decodedToken.getUid();
+        String email = decodedToken.getEmail();
+
+        Optional<User> existingUser = userRepository.findById(uid);
+        
+        if (existingUser.isPresent()) {
+            return existingUser.get();
+        } else {
+            // Create a brand new user in PostgreSQL with a $0 balance
+            User newUser = new User();
+            newUser.setUid(uid);
+            newUser.setEmail(email);
+            newUser.setBalance(0.0);
+            newUser.setTotalWagered(0.0);
+            newUser.setRakebackAvailable(0.0);
+            newUser.setRakebackClaimed(0.0);
+            newUser.setRakebackRate(0.01); // 1% default
+            
+            return userRepository.save(newUser);
+        }
+    }
+}
+
+package com.cnx.onyxbackend.service;
+
+import com.cnx.onyxbackend.model.BlackjackSession;
+import com.cnx.onyxbackend.model.GameStatus;
+import com.cnx.onyxbackend.model.PlayerHand;
+import com.cnx.onyxbackend.model.User;
+import com.cnx.onyxbackend.repository.BlackjackSessionRepository;
+import com.cnx.onyxbackend.repository.UserRepository;
+import com.cnx.onyxbackend.util.DeckUtil;
+import com.cnx.onyxbackend.util.HandUtil;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.*;
+
+@Service
+public class BlackjackService {
+
+    private final UserRepository userRepository;
+    private final BlackjackSessionRepository sessionRepository;
+
+    public BlackjackService(UserRepository userRepository, BlackjackSessionRepository sessionRepository) {
+        this.userRepository = userRepository;
+        this.sessionRepository = sessionRepository;
+    }
+
+    @Transactional
+    public Map<String, Object> startGame(String uid, double bet) throws Exception {
+        // 1. Fetch and Lock the user
+        User user = userRepository.findByIdForUpdate(uid)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getActiveGameId() != null) throw new RuntimeException("Game already active");
+        if (user.getBalance() < bet) throw new RuntimeException("Insufficient balance");
+
+        // 2. Math & Deductions
+        double rakeEarned = bet * user.getRakebackRate();
+        user.setBalance(user.getBalance() - bet);
+        user.setTotalWagered(user.getTotalWagered() + bet);
+        user.setRakebackAvailable(user.getRakebackAvailable() + rakeEarned);
+
+        // 3. Setup Cards
+        List<String> deck = DeckUtil.generateShuffledDeck();
+        List<String> playerHandCards = new ArrayList<>(Arrays.asList(deck.remove(0), deck.remove(0)));
+        List<String> dealerHand = new ArrayList<>(Arrays.asList(deck.remove(0), deck.remove(0)));
+
+        PlayerHand firstHand = new PlayerHand();
+        firstHand.setCards(playerHandCards);
+        firstHand.setBet(bet);
+        firstHand.setDoubled(false);
+
+        // 4. Create Postgres Session
+        BlackjackSession session = new BlackjackSession();
+        session.setId(UUID.randomUUID().toString());
+        session.setUid(uid);
+        session.setBetAmount(bet);
+        session.setDeck(deck);
+        session.setDealerHand(dealerHand);
+        session.getPlayerHands().add(firstHand);
+        session.setStatus(GameStatus.PLAYER_TURN.name());
+
+        // 5. Save to Postgres
+        sessionRepository.save(session);
+        user.setActiveGameId(session.getId());
+        userRepository.save(user);
+
+        return buildSessionResponse(session);
+    }
+
+    @Transactional
+    public Map<String, Object> hit(String uid) throws Exception {
+        User user = userRepository.findById(uid).orElseThrow();
+        BlackjackSession session = sessionRepository.findById(user.getActiveGameId())
+                .orElseThrow(() -> new RuntimeException("No active game"));
+
+        if (!"PLAYER_TURN".equals(session.getStatus())) throw new RuntimeException("Not player's turn");
+
+        PlayerHand currentHand = session.getPlayerHands().get(session.getActiveHandIndex());
+        currentHand.getCards().add(session.getDeck().remove(0));
+
+        if (HandUtil.calculateHandValue(currentHand.getCards()) > 21) {
+            if (session.getActiveHandIndex() + 1 < session.getPlayerHands().size()) {
+                session.setActiveHandIndex(session.getActiveHandIndex() + 1);
+            } else {
+                session.setStatus("DEALER_TURN");
+            }
+        }
+
+        sessionRepository.save(session);
+        return buildSessionResponse(session);
+    }
+
+    @Transactional
+    public Map<String, Object> stand(String uid) throws Exception {
+        User user = userRepository.findByIdForUpdate(uid).orElseThrow();
+        BlackjackSession session = sessionRepository.findById(user.getActiveGameId())
+                .orElseThrow(() -> new RuntimeException("No active game"));
+
+        // Handle Splits
+        if (session.getActiveHandIndex() + 1 < session.getPlayerHands().size()) {
+            session.setActiveHandIndex(session.getActiveHandIndex() + 1);
+            sessionRepository.save(session);
+            return buildSessionResponse(session);
+        }
+
+        // Play Dealer
+        List<String> dealerHand = session.getDealerHand();
+        while (HandUtil.calculateHandValue(dealerHand) < 17) {
+            dealerHand.add(session.getDeck().remove(0));
+        }
+        int dealerValue = HandUtil.calculateHandValue(dealerHand);
+
+        // Payouts
+        double totalPayout = 0;
+        for (PlayerHand hand : session.getPlayerHands()) {
+            int playerValue = HandUtil.calculateHandValue(hand.getCards());
+            boolean isBlackjack = hand.getCards().size() == 2 && playerValue == 21;
+
+            if (playerValue > 21) continue;
+
+            if (isBlackjack && dealerValue != 21) {
+                totalPayout += hand.getBet() * 2.5;
+            } else if (dealerValue > 21 || playerValue > dealerValue) {
+                totalPayout += hand.getBet() * 2;
+            } else if (playerValue == dealerValue) {
+                totalPayout += hand.getBet();
+            }
+        }
+
+        // Finish Game
+        user.setBalance(user.getBalance() + totalPayout);
+        user.setActiveGameId(null);
+        userRepository.save(user);
+        sessionRepository.delete(session);
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("dealerHand", dealerHand);
+        result.put("payout", totalPayout);
+        return result;
+    }
+
+    @Transactional
+    public Map<String, Object> doubleDown(String uid) throws Exception {
+        User user = userRepository.findByIdForUpdate(uid).orElseThrow();
+        BlackjackSession session = sessionRepository.findById(user.getActiveGameId()).orElseThrow();
+
+        PlayerHand currentHand = session.getPlayerHands().get(session.getActiveHandIndex());
+        double bet = currentHand.getBet();
+
+        if (currentHand.getCards().size() != 2) throw new RuntimeException("Only on first two cards");
+        if (currentHand.isDoubled()) throw new RuntimeException("Already doubled");
+        if (user.getBalance() < bet) throw new RuntimeException("Insufficient balance");
+
+        // Math
+        double rakeEarned = bet * user.getRakebackRate();
+        user.setBalance(user.getBalance() - bet);
+        user.setTotalWagered(user.getTotalWagered() + bet);
+        user.setRakebackAvailable(user.getRakebackAvailable() + rakeEarned);
+
+        // Update Hand
+        currentHand.setBet(bet * 2);
+        currentHand.setDoubled(true);
+        currentHand.getCards().add(session.getDeck().remove(0));
+
+        if (session.getActiveHandIndex() + 1 < session.getPlayerHands().size()) {
+            session.setActiveHandIndex(session.getActiveHandIndex() + 1);
+        } else {
+            session.setStatus("DEALER_TURN");
+        }
+
+        userRepository.save(user);
+        sessionRepository.save(session);
+        return buildSessionResponse(session);
+    }
+
+    @Transactional
+    public Map<String, Object> split(String uid) throws Exception {
+        User user = userRepository.findByIdForUpdate(uid).orElseThrow();
+        BlackjackSession session = sessionRepository.findById(user.getActiveGameId()).orElseThrow();
+
+        if (session.getPlayerHands().size() > 1) throw new RuntimeException("Already split");
+        
+        PlayerHand currentHand = session.getPlayerHands().get(0);
+        double bet = currentHand.getBet();
+
+        String rank1 = currentHand.getCards().get(0).substring(0, currentHand.getCards().get(0).length() - 1);
+        String rank2 = currentHand.getCards().get(1).substring(0, currentHand.getCards().get(1).length() - 1);
+
+        if (!rank1.equals(rank2)) throw new RuntimeException("Cards must be same rank");
+        if (user.getBalance() < bet) throw new RuntimeException("Insufficient balance");
+
+        // Math
+        double rakeEarned = bet * user.getRakebackRate();
+        user.setBalance(user.getBalance() - bet);
+        user.setTotalWagered(user.getTotalWagered() + bet);
+        user.setRakebackAvailable(user.getRakebackAvailable() + rakeEarned);
+
+        // Create the second hand
+        PlayerHand hand2 = new PlayerHand();
+        hand2.setBet(bet);
+        
+        // Move the second card from the first hand to the second hand
+        hand2.getCards().add(currentHand.getCards().remove(1)); 
+        
+        // 🔥 REMOVED the automatic card dealing!
+        // The player now has two hands with exactly 1 card each.
+        // They must manually click "Hit" or "Stand" for each hand.
+
+        session.getPlayerHands().add(hand2);
+
+        userRepository.save(user);
+        sessionRepository.save(session);
+        return buildSessionResponse(session);
+    }
+
+    @Transactional
+    public Map<String, Object> claimRakeback(String uid) throws Exception {
+        User user = userRepository.findByIdForUpdate(uid).orElseThrow();
+
+        double amountToClaim = Math.floor(user.getRakebackAvailable());
+        if (amountToClaim < 1.0) throw new RuntimeException("You need at least $1.00 to claim.");
+
+        user.setBalance(user.getBalance() + amountToClaim);
+        user.setRakebackAvailable(user.getRakebackAvailable() - amountToClaim);
+        user.setRakebackClaimed(user.getRakebackClaimed() + amountToClaim);
+
+        userRepository.save(user);
+        return Map.of("claimed", amountToClaim);
+    }
+
+    // Helper method to keep frontend mapping identical to Firestore output
+    private Map<String, Object> buildSessionResponse(BlackjackSession session) {
+        Map<String, Object> res = new HashMap<>();
+        res.put("uid", session.getUid());
+        res.put("betAmount", session.getBetAmount());
+        res.put("deck", session.getDeck());
+        res.put("dealerHand", session.getDealerHand());
+        res.put("activeHandIndex", session.getActiveHandIndex());
+        res.put("status", session.getStatus());
+
+        List<Map<String, Object>> handMaps = new ArrayList<>();
+        for (PlayerHand h : session.getPlayerHands()) {
+            Map<String, Object> hm = new HashMap<>();
+            hm.put("cards", h.getCards());
+            hm.put("bet", h.getBet());
+            hm.put("doubled", h.isDoubled());
+            handMaps.add(hm);
+        }
+        res.put("playerHands", handMaps);
+        return res;
+    }
+}
+
+package com.cnx.onyxbackend.service;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.cnx.onyxbackend.model.User;
+import com.cnx.onyxbackend.repository.UserRepository;
+
+@Service
+public class TransactionService {
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Transactional 
+    public User deposit(String uid, double amount) { // CHANGED: Long userId -> String uid
+        
+        // PESSIMISTIC_WRITE lock ensures no double-spending
+        User user = userRepository.findByIdForUpdate(uid) // CHANGED: userId -> uid
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        // Do the math safely
+        double newBalance = user.getBalance() + amount;
+        user.setBalance(newBalance);
+
+        // Save the new balance to PostgreSQL
+        return userRepository.save(user);
+    }
+    
+    @Transactional 
+    public User withdraw(String uid, double amount) {
+        User user = userRepository.findByIdForUpdate(uid)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getBalance() < amount) {
+            throw new RuntimeException("Insufficient funds");
+        }
+
+        user.setBalance(user.getBalance() - amount);
+        return userRepository.save(user);
+    }
+}
+
+package com.cnx.onyxbackend.util;
+
+import java.util.List;
+
+public class DealerUtil {
+    public static void playDealer(List<String> dealerHand, List<String> deck) {
+
+        while (true) {
+            int value = HandUtil.calculateHandValue(dealerHand);
+
+            boolean isSoft = HandUtil.isSoft(dealerHand);
+
+            if (value < 17) {
+                dealerHand.add(deck.remove(0));
+            } else if (value == 17 && isSoft) {
+                dealerHand.add(deck.remove(0));
+            } else {
+                break;
+            }
+        }
+    }
+}
+
+
+package com.cnx.onyxbackend.util;
+
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
+public class DeckUtil {
+
+    private static final String[] SUITS = {"♥", "♦", "♣", "♠"};
+    private static final String[] RANKS = {
+            "2","3","4","5","6","7","8","9","10","J","Q","K","A"
+    };
+
+    public static List<String> generateShuffledDeck() {
+        List<String> deck = new ArrayList<>();
+
+        for (String suit : SUITS) {
+            for (String rank : RANKS) {
+                deck.add(rank + suit);
+            }
+        }
+
+        Collections.shuffle(deck);
+        return deck;
+    }
+}
+
+package com.cnx.onyxbackend.util;
+
+import java.util.List;
+
+public class HandUtil {
+
+    public static int calculateHandValue(List<String> hand) {
+        int total = 0;
+        int aceCount = 0;
+
+        for (String card : hand) {
+            String rank = card.substring(0, card.length() - 1);
+
+            switch (rank) {
+                case "J":
+                case "Q":
+                case "K":
+                    total += 10;
+                    break;
+                case "A":
+                    total += 11;
+                    aceCount++;
+                    break;
+                default:
+                    total += Integer.parseInt(rank);
+            }
+        }
+
+        // Convert A from 11 → 1 if bust
+        while (total > 21 && aceCount > 0) {
+            total -= 10;
+            aceCount--;
+        }
+
+        return total;
+    }
+
+    public static boolean isBlackjack(List<String> hand) {
+        return hand.size() == 2 && calculateHandValue(hand) == 21;
+    }
+
+    public static boolean isSoft(List<String> hand) {
+        int total = 0;
+        int aceCount = 0;
+
+        for (String card : hand) {
+            String rank = card.substring(0, card.length() - 1);
+            if (rank.equals("A")) {
+                aceCount++;
+            }
+        }
+
+        total = calculateHandValue(hand);
+
+        // Soft if there was at least one ace counted as 11
+        return aceCount > 0 && total <= 21;
+    }
+}
+
+package com.cnx.onyxbackend;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class OnyxbackendApplication {
+
+	public static void main(String[] args) {
+		SpringApplication.run(OnyxbackendApplication.class, args);
+	}
+
+}
