@@ -2,18 +2,18 @@
 
 ![Onyx Architecture](docs/ONYX.png)
 
-Onyx is a full-stack, web-based gaming and gambling platform. It features a suite of interactive games including **Crash, Blackjack, Slots, and Lucky Card**. Built with a modern React frontend and a robust Spring Boot Java backend, the platform leverages Firebase for secure authentication and real-time game state management.
+Onyx is a full-stack, web-based interactive game simulation platform designed to demonstrate real-time game logic, secure authentication, and scalable backend architecture. The platform features multiple skill- and probability-based mini-games. Built with a modern React frontend and a robust Spring Boot Java backend, the platform leverages Firebase for secure authentication and real-time game state management.
 
 ---
 
 ## ✨ Features
 
 * **Interactive Games:**
-    * 📈 **Crash:** A real-time multiplier game.
-    * 🃏 **Blackjack:** Classic casino card game with dealer logic. 
-    * 🎰 **Slots (V1):** A virtual slot machine experience.
-    * 🍀 **Lucky Card:** A specialized card prediction game.
-* **Virtual Wallet System:** Manage user balances, bets, and payouts through a dedicated Bank page.
+    * 📈 **MultiplierRush:** Real-time multiplier simulation engine.
+    * 🃏 **TwentyOneChallenge:** Strategy-based card engine with dealer logic.
+    * 🎰 **SpinQuestV1:** RNG-powered reel simulation system.
+    * 🍀 **MysteryDraw:** Probability-based card prediction module.
+* **Virtual Wallet System:** Manage user balances, used points, and payouts through a dedicated Bank page.
 * **Secure Authentication:** Powered by Firebase Auth, including secure token validation on the Spring Boot backend.
 * **Engaging UI/UX:** Built with Tailwind CSS, featuring custom animations, sound effects, and responsive design.
 * **State Management:** Global state management using Zustand for smooth frontend performance.
@@ -135,15 +135,15 @@ Our React application is organized modularly by features and components:
 │   │   └── 📄 firebase.ts
 │   ├── 📁 pages/
 │   │   ├── 📁 games/
-│   │   │   ├── 📁 Crash/
-│   │   │   │   └── 📄 Crash.tsx
-│   │   │   ├── 📁 blackjack/
-│   │   │   │   ├── 📄 Blackjack.tsx
-│   │   │   │   └── 📄 PlayingCard.tsx
-│   │   │   ├── 📁 luckycard/
-│   │   │   │   └── 📄 LuckyCard.tsx
-│   │   │   └── 📁 slotv1/
-│   │   │       └── 📄 SlotV1.tsx
+│   │   │   ├── 📁 multiplierrush/
+│   │   │   │   └── 📄 MultiplierRush.tsx
+│   │   │   ├── 📁 mysterydraw/
+│   │   │   │   └── 📄 MysteryDraw.tsx
+│   │   │   ├── 📁 spinquestv1/
+│   │   │   │   └── 📄 SpinQuestV1.tsx
+│   │   │   └── 📁 twentyonechallenge/
+│   │   │       ├── 📄 PlayingCard.tsx
+│   │   │       └── 📄 TwentyOneChallenge.tsx
 │   │   ├── 📄 Bank.tsx
 │   │   ├── 📄 Home.tsx
 │   │   ├── 📄 Login.tsx
@@ -188,40 +188,40 @@ The Spring Boot server follows a layered architecture to separate concerns:
 │   │   │               │   └── ☕ FirebaseConfig.java
 │   │   │               ├── 📁 controller/
 │   │   │               │   ├── ☕ AuthController.java
-│   │   │               │   ├── ☕ BlackjackController.java
 │   │   │               │   ├── ☕ CrashController.java
 │   │   │               │   ├── ☕ LuckyCardController.java
-│   │   │               │   ├── ☕ SlotController.java
+│   │   │               │   ├── ☕ SpinQuestController.java
+│   │   │               │   ├── ☕ TwentyOneChallengeController.java
 │   │   │               │   └── ☕ UserController.java
 │   │   │               ├── 📁 dto/
-│   │   │               │   ├── ☕ BlackjackResponseDTO.java
 │   │   │               │   ├── ☕ CrashResponseDTO.java
 │   │   │               │   ├── ☕ LuckyCardResponseDTO.java
 │   │   │               │   ├── ☕ PlayerHandDTO.java
-│   │   │               │   └── ☕ SlotResponseDTO.java
+│   │   │               │   ├── ☕ SpinQuestResponseDTO.java
+│   │   │               │   └── ☕ TwentyOneChallengeResponseDTO.java
 │   │   │               ├── 📁 model/
-│   │   │               │   ├── ☕ BlackjackSession.java
 │   │   │               │   ├── ☕ CrashSession.java
 │   │   │               │   ├── ☕ GameStatus.java
 │   │   │               │   ├── ☕ LuckyCardSession.java
 │   │   │               │   ├── ☕ PlayerHand.java
-│   │   │               │   ├── ☕ SlotSession.java
+│   │   │               │   ├── ☕ SpinQuestSession.java
+│   │   │               │   ├── ☕ TwentyOneChallengeSession.java
 │   │   │               │   └── ☕ User.java
 │   │   │               ├── 📁 repository/
-│   │   │               │   ├── ☕ BlackjackSessionRepository.java
 │   │   │               │   ├── ☕ CrashSessionRepository.java
 │   │   │               │   ├── ☕ LuckyCardSessionRepository.java
+│   │   │               │   ├── ☕ TwentyOneChallengeSessionRepository.java
 │   │   │               │   └── ☕ UserRepository.java
 │   │   │               ├── 📁 security/
 │   │   │               │   ├── ☕ FirebaseAuthenticationFilter.java
 │   │   │               │   └── ☕ SecurityConfig.java
 │   │   │               ├── 📁 service/
 │   │   │               │   ├── ☕ AuthService.java
-│   │   │               │   ├── ☕ BlackjackService.java
 │   │   │               │   ├── ☕ CrashService.java
 │   │   │               │   ├── ☕ LuckyCardService.java
-│   │   │               │   ├── ☕ SlotService.java
+│   │   │               │   ├── ☕ SpinQuestService.java
 │   │   │               │   ├── ☕ TransactionService.java
+│   │   │               │   ├── ☕ TwentyOneChallengeService.java
 │   │   │               │   └── ☕ UserService.java
 │   │   │               ├── 📁 util/
 │   │   │               │   ├── ☕ DealerUtil.java
@@ -247,6 +247,31 @@ The Spring Boot server follows a layered architecture to separate concerns:
 └── ⚙️ pom.xml
 ```
 
-### Backend Class Diagram
+### Full Backend Class Diagram
 Below is the UML representation of our backend models, services, and relationships:
-![UML Diagram](docs/backend.png)
+![UML Diagram](docs/FullBackendClassDiagram.png)
+
+### Split Backend Class Diagram
+1️⃣ Core Configuration & Security Diagram
+![UML Diagram](docs/Core%20Configuration%20&%20Security%20Diagram.png)
+
+2️⃣ User & Transaction Module
+![UML Diagram](docs/User%20&%20Transaction%20Module.png)
+
+3️⃣ Crash Game Module
+![UML Diagram](docs/Crash%20Game%20Module.png)
+
+4️⃣ Lucky Card Module
+![UML Diagram](docs/Lucky%20Card%20Module.png)
+
+5️⃣ SpinQuest Module
+![UML Diagram](docs/SpinQuest%20Module.png)
+
+6️⃣ TwentyOneChallenge Module
+![UML Diagram](docs/TwentyOneChallenge%20Module.png)
+
+7️⃣ Utility Classes
+![UML Diagram](docs/Utility%20Classes.png)
+
+8️⃣ Application Entry + Tests Classes
+![UML Diagram](docs/Application%20Entry%20+%20Tests.png)
