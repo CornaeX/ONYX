@@ -10,7 +10,7 @@ const getAuthHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
 });
 
-export function SlotV1() {
+export function SpinQuestV1() {
   const balance = useStore((state) => state.balance);
   const setBalance = useStore((state) => state.setBalance);
   const setRakeback = useStore((state) => state.setRakeback);
@@ -75,7 +75,7 @@ export function SlotV1() {
 
     try {
       const res = await fetch(
-        "https://onyxbackend.share.zrok.io/api/slot/spin",
+        "https://onyxbackend.share.zrok.io/api/SpinQuest/spin",
         {
           method: "POST",
           headers: getAuthHeaders(),
@@ -134,15 +134,15 @@ export function SlotV1() {
       {/* TOP BAR */}
       <div className="w-full flex justify-between items-center border-b border-gray-800 pb-4">
         <div className="text-gray-400 font-bold">
-          Bankroll:
+          Points:
           <span className="text-green-400 text-xl ml-2">
-            ${(balance || 0).toFixed(2)}
+            {(balance || 0).toFixed(2)} ★
           </span>
         </div>
         <div className="text-gray-400 font-bold">
-          Current Bet:
+          Points Used:
           <span className="text-yellow-400 text-xl ml-2">
-            ${currentBet.toFixed(2)}
+            {currentBet.toFixed(2)} ★
           </span>
         </div>
       </div>
@@ -155,12 +155,12 @@ export function SlotV1() {
 
             <div className="w-32 h-32 rounded-full border-2 border-dashed border-blue-500/50 flex items-center justify-center mb-6">
               <span className="text-yellow-400 text-3xl font-bold">
-                ${currentBet.toFixed(2)}
+                {currentBet.toFixed(2)} ★
               </span>
             </div>
 
             <h2 className="text-2xl font-bold text-gray-300">
-              {currentBet > 0 ? "Ready to Spin" : "Place Your Bets"}
+              {currentBet > 0 ? "Ready to Spin" : "Choose Your Points"}
             </h2>
           </div>
         ) : (
@@ -205,7 +205,7 @@ export function SlotV1() {
                   disabled={balance < amt}
                   className="w-14 h-14 rounded-full font-bold text-sm border-2 border-dashed bg-[#112240] border-gray-600 hover:border-blue-400 hover:text-blue-400 transition-transform hover:scale-110 disabled:opacity-50"
                 >
-                  ${amt}
+                  {amt} ★
                 </button>
               ))}
             </div>
@@ -243,7 +243,7 @@ export function SlotV1() {
             disabled={gameState === "spinning"}
             className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-10 rounded disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {gameState === "spinning" ? "SPINNING..." : "NEW BET"}
+            {gameState === "spinning" ? "SPINNING..." : "NEW GAME"}
           </button>
         )}
       </div>

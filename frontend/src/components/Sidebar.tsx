@@ -20,10 +20,10 @@ export const Sidebar = () => {
   const { setActiveCategory } = useStore();
 
   const casinoItems = [
-    { icon: Gamepad2, label: 'Table Games' },
-    { icon: LayoutGrid, label: 'Slots' },
-    { icon: Gift, label: 'Lottery' },
-    { icon: Rocket, label: 'Crash' },
+    { icon: Gamepad2, label: 'Strategy Games' },
+    { icon: LayoutGrid, label: 'Arcade Games' },
+    { icon: Gift, label: 'Random Events' },
+    { icon: Rocket, label: 'Timing Challenge' },
   ];
 
   const handleCategoryClick = (label: string) => {
@@ -53,7 +53,7 @@ export const Sidebar = () => {
             ONYX
           </span>
           <span className="text-[11px] text-white/90 font-bold tracking-widest -mt-1 mr-1">
-            vercel.app
+            .share.zrok.io
           </span>
         </div>
       </div>

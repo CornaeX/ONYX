@@ -11,72 +11,72 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.cnx.onyxbackend.dto.BlackjackResponseDTO;
-import com.cnx.onyxbackend.service.BlackjackService;
+import com.cnx.onyxbackend.dto.TwentyOneChallengeResponseDTO;
+import com.cnx.onyxbackend.service.TwentyOneChallengeService;
 
 @RestController
-@RequestMapping("/api/blackjack")
-public class BlackjackController {
+@RequestMapping("/api/TwentyOneChallenge")
+public class TwentyOneChallengeController {
 
-    private final BlackjackService blackjackService;
+    private final TwentyOneChallengeService twentyOneChallengeService;
 
-    public BlackjackController(BlackjackService blackjackService) {
-        this.blackjackService = blackjackService;
+    public TwentyOneChallengeController(TwentyOneChallengeService twentyOneChallengeService) {
+        this.twentyOneChallengeService = twentyOneChallengeService;
     }
 
     // 1️⃣ START GAME
     @PostMapping("/start")
-    public BlackjackResponseDTO startGame(
+    public TwentyOneChallengeResponseDTO startGame(
             @AuthenticationPrincipal String uid,
             @RequestBody Map<String, Double> request
     ) throws Exception {
 
         double bet = request.get("bet");
 
-        return blackjackService.startGame(uid, bet);
+        return twentyOneChallengeService.startGame(uid, bet);
     }
 
     // 2️⃣ HIT
     @PostMapping("/hit")
-    public BlackjackResponseDTO hit(
+    public TwentyOneChallengeResponseDTO hit(
             @AuthenticationPrincipal String uid
     ) throws Exception {
 
-        return blackjackService.hit(uid);
+        return twentyOneChallengeService.hit(uid);
     }
 
     // 3️⃣ STAND
     @PostMapping("/stand")
-    public BlackjackResponseDTO stand(
+    public TwentyOneChallengeResponseDTO stand(
             @AuthenticationPrincipal String uid
     ) throws Exception {
 
-        return blackjackService.stand(uid);
+        return twentyOneChallengeService.stand(uid);
     }
 
     // 4️⃣ SPLIT
     @PostMapping("/split")
-    public BlackjackResponseDTO split(
+    public TwentyOneChallengeResponseDTO split(
             @AuthenticationPrincipal String uid
     ) throws Exception {
 
-        return blackjackService.split(uid);
+        return twentyOneChallengeService.split(uid);
     }
 
     // 5️⃣ DOUBLE
     @PostMapping("/double")
-    public BlackjackResponseDTO doubleDown(
+    public TwentyOneChallengeResponseDTO doubleDown(
             @AuthenticationPrincipal String uid
     ) throws Exception {
 
-        return blackjackService.doubleDown(uid);
+        return twentyOneChallengeService.doubleDown(uid);
     }
 
     @GetMapping("/session")
     public ResponseEntity<?> getActiveSession(Authentication auth) {
         String uid = auth.getName();
 
-        var sessionOpt = blackjackService.getActiveSession(uid);
+        var sessionOpt = twentyOneChallengeService.getActiveSession(uid);
 
         if (sessionOpt.isEmpty()) {
             return ResponseEntity.ok(Map.of("active", false));

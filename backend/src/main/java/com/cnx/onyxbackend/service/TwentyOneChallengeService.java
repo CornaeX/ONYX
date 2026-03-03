@@ -1,12 +1,12 @@
 package com.cnx.onyxbackend.service;
 
-import com.cnx.onyxbackend.dto.BlackjackResponseDTO;
+import com.cnx.onyxbackend.dto.TwentyOneChallengeResponseDTO;
 import com.cnx.onyxbackend.dto.PlayerHandDTO;
-import com.cnx.onyxbackend.model.BlackjackSession;
+import com.cnx.onyxbackend.model.TwentyOneChallengeSession;
 import com.cnx.onyxbackend.model.GameStatus;
 import com.cnx.onyxbackend.model.PlayerHand;
 import com.cnx.onyxbackend.model.User;
-import com.cnx.onyxbackend.repository.BlackjackSessionRepository;
+import com.cnx.onyxbackend.repository.TwentyOneChallengeSessionRepository;
 import com.cnx.onyxbackend.repository.UserRepository;
 import com.cnx.onyxbackend.util.DealerUtil;
 import com.cnx.onyxbackend.util.DeckUtil;
@@ -17,18 +17,18 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 @Service
-public class BlackjackService {
+public class TwentyOneChallengeService {
 
     private final UserRepository userRepository;
-    private final BlackjackSessionRepository sessionRepository;
+    private final TwentyOneChallengeSessionRepository sessionRepository;
 
-    public BlackjackService(UserRepository userRepository, BlackjackSessionRepository sessionRepository) {
+    public TwentyOneChallengeService(UserRepository userRepository, TwentyOneChallengeSessionRepository sessionRepository) {
         this.userRepository = userRepository;
         this.sessionRepository = sessionRepository;
     }
 
     @Transactional
-    public BlackjackResponseDTO startGame(String uid, double bet) throws Exception {
+    public TwentyOneChallengeResponseDTO startGame(String uid, double bet) throws Exception {
         // 1. Fetch and Lock the user
         User user = userRepository.findByIdForUpdate(uid)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -53,7 +53,7 @@ public class BlackjackService {
         firstHand.setDoubled(false);
 
         // 4. Create Postgres Session
-        BlackjackSession session = new BlackjackSession();
+        TwentyOneChallengeSession session = new TwentyOneChallengeSession();
         session.setId(UUID.randomUUID().toString());
         session.setUid(uid);
         session.setBetAmount(bet);
@@ -94,9 +94,9 @@ public class BlackjackService {
     }
 
     @Transactional
-    public BlackjackResponseDTO hit(String uid) throws Exception {
+    public TwentyOneChallengeResponseDTO hit(String uid) throws Exception {
         User user = userRepository.findByIdForUpdate(uid).orElseThrow();
-        BlackjackSession session = sessionRepository.findById(user.getActiveGameId())
+        TwentyOneChallengeSession session = sessionRepository.findById(user.getActiveGameId())
                 .orElseThrow(() -> new RuntimeException("No active game"));
 
         if (!"PLAYER_TURN".equals(session.getStatus())) throw new RuntimeException("Not player's turn");
@@ -117,10 +117,10 @@ public class BlackjackService {
     }
 
     @Transactional
-    public BlackjackResponseDTO stand(String uid) throws Exception {
+    public TwentyOneChallengeResponseDTO stand(String uid) throws Exception {
 
         User user = userRepository.findByIdForUpdate(uid).orElseThrow();
-        BlackjackSession session = sessionRepository
+        TwentyOneChallengeSession session = sessionRepository
                 .findById(user.getActiveGameId())
                 .orElseThrow(() -> new RuntimeException("No active game"));
 
@@ -153,17 +153,17 @@ public class BlackjackService {
         for (PlayerHand hand : session.getPlayerHands()) {
 
             int playerValue = HandUtil.calculateHandValue(hand.getCards());
-            boolean isBlackjack = hand.getCards().size() == 2 && playerValue == 21;
+            boolean isTwentyOneChallenge = hand.getCards().size() == 2 && playerValue == 21;
 
             System.out.println("----");
             System.out.println("Cards: " + hand.getCards());
             System.out.println("PlayerValue: " + playerValue);
             System.out.println("DealerValue: " + dealerValue);
-            System.out.println("IsBlackjack: " + isBlackjack);
+            System.out.println("IsTwentyOneChallenge: " + isTwentyOneChallenge);
 
             if (playerValue > 21) continue;
 
-            if (isBlackjack && dealerValue != 21) {
+            if (isTwentyOneChallenge && dealerValue != 21) {
                 totalPayout += hand.getBet() * 2.5;
             } else if (dealerValue > 21 || playerValue > dealerValue) {
                 totalPayout += hand.getBet() * 2;
@@ -188,9 +188,9 @@ public class BlackjackService {
     }
 
     @Transactional
-    public BlackjackResponseDTO doubleDown(String uid) throws Exception {
+    public TwentyOneChallengeResponseDTO doubleDown(String uid) throws Exception {
         User user = userRepository.findByIdForUpdate(uid).orElseThrow();
-        BlackjackSession session = sessionRepository.findById(user.getActiveGameId()).orElseThrow();
+        TwentyOneChallengeSession session = sessionRepository.findById(user.getActiveGameId()).orElseThrow();
 
         PlayerHand currentHand = session.getPlayerHands().get(session.getActiveHandIndex());
         double bet = currentHand.getBet();
@@ -222,9 +222,9 @@ public class BlackjackService {
     }
 
     @Transactional
-    public BlackjackResponseDTO split(String uid) throws Exception {
+    public TwentyOneChallengeResponseDTO split(String uid) throws Exception {
         User user = userRepository.findByIdForUpdate(uid).orElseThrow();
-        BlackjackSession session = sessionRepository.findById(user.getActiveGameId()).orElseThrow();
+        TwentyOneChallengeSession session = sessionRepository.findById(user.getActiveGameId()).orElseThrow();
 
         if (session.getPlayerHands().size() > 1)
             throw new RuntimeException("Already split");
@@ -279,7 +279,7 @@ public class BlackjackService {
 
     @Transactional
     public Map<String, Double> claimRakeback(String uid) throws Exception {
-        // 🔥 FIXED: Changed return type in header from BlackjackResponseDTO to Map<String, Double>
+        // 🔥 FIXED: Changed return type in header from TwentyOneChallengeResponseDTO to Map<String, Double>
         User user = userRepository.findByIdForUpdate(uid).orElseThrow();
 
         double amountToClaim = Math.floor(user.getRakebackAvailable());
@@ -294,7 +294,7 @@ public class BlackjackService {
     }
 
     @Transactional(readOnly = true)
-    public Optional<BlackjackResponseDTO> getActiveSession(String uid) {
+    public Optional<TwentyOneChallengeResponseDTO> getActiveSession(String uid) {
         User user = userRepository.findById(uid).orElseThrow();
 
         if (user.getActiveGameId() == null) {
@@ -307,7 +307,7 @@ public class BlackjackService {
             throw new RuntimeException("No active game");
         }
 
-        BlackjackSession session = sessionRepository
+        TwentyOneChallengeSession session = sessionRepository
             .findById(user.getActiveGameId())
             .orElseThrow(() -> new RuntimeException("No active game"));
 
@@ -315,8 +315,8 @@ public class BlackjackService {
     }
 
     // Helper method to keep frontend mapping identical to Firestore output
-    private BlackjackResponseDTO buildSessionResponse(
-            BlackjackSession session,
+    private TwentyOneChallengeResponseDTO buildSessionResponse(
+            TwentyOneChallengeSession session,
             double payout,
             User user
     ) {
@@ -329,7 +329,7 @@ public class BlackjackService {
                         h.isDoubled()))
                 .toList();
 
-        return new BlackjackResponseDTO(
+        return new TwentyOneChallengeResponseDTO(
                 session.getUid(),
                 session.getBetAmount(),
                 session.getDealerHand(),
@@ -342,8 +342,8 @@ public class BlackjackService {
         );
     }
 
-    private BlackjackResponseDTO buildSessionResponse(
-            BlackjackSession session,
+    private TwentyOneChallengeResponseDTO buildSessionResponse(
+            TwentyOneChallengeSession session,
             User user
     ) {
         return buildSessionResponse(session, 0, user);

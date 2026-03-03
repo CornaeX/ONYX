@@ -1,6 +1,6 @@
 package com.cnx.onyxbackend.service;
 
-import com.cnx.onyxbackend.dto.SlotResponseDTO;
+import com.cnx.onyxbackend.dto.SpinQuestResponseDTO;
 import com.cnx.onyxbackend.model.User;
 import com.cnx.onyxbackend.repository.UserRepository;
 
@@ -10,7 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 
 @Service
-public class SlotService {
+public class SpinQuestService {
 
     private final UserRepository userRepository;
 
@@ -22,12 +22,12 @@ public class SlotService {
         "7️⃣", 5
     );
 
-    public SlotService(UserRepository userRepository) {
+    public SpinQuestService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
     @Transactional
-    public SlotResponseDTO spin(String uid, double bet) {
+    public SpinQuestResponseDTO spin(String uid, double bet) {
 
         User user = userRepository.findByIdForUpdate(uid).orElseThrow();
 
@@ -53,7 +53,7 @@ public class SlotService {
 
         userRepository.save(user);
 
-        return new SlotResponseDTO(
+        return new SpinQuestResponseDTO(
             result,
             payout,
             user.getBalance(),

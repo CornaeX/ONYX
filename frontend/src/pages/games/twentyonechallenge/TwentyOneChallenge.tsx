@@ -15,8 +15,15 @@ const getAuthHeaders = () => ({
 });
 
 // Helper to translate Backend string "10♥" to Frontend object {suit: '♥', value: '10'}
+const suitMap: Record<string, string> = {
+  '♥': '🔥',
+  '♦': '💎',
+  '♣': '⚡',
+  '♠': '🧶'
+};
+
 const parseCard = (cardStr: string): CardType => ({
-  suit: cardStr.slice(-1),
+  suit: suitMap[cardStr.slice(-1)] || cardStr.slice(-1),
   value: cardStr.slice(0, -1)
 });
 
@@ -32,7 +39,7 @@ const calculateScore = (hand: CardType[]): number => {
   return score;
 };
 
-export function Blackjack() {
+export function TwentyOneChallenge() {
   const balance = useStore((state) => state.balance);
   const setBalance = useStore((state) => state.setBalance);
 
@@ -49,7 +56,7 @@ export function Blackjack() {
   const restoreSession = async () => {
     try {
       const res = await fetch(
-        'https://onyxbackend.share.zrok.io/api/blackjack/session',
+        'https://onyxbackend.share.zrok.io/api/TwentyOneChallenge/session',
         { headers: getAuthHeaders() }
       );
 
@@ -180,7 +187,7 @@ export function Blackjack() {
     setDealerHand([]);
 
     try {
-      const res = await fetch('https://onyxbackend.share.zrok.io/api/blackjack/start', {
+      const res = await fetch('https://onyxbackend.share.zrok.io/api/TwentyOneChallenge/start', {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ bet: currentBet })
@@ -222,7 +229,7 @@ export function Blackjack() {
 
   const hit = async () => {
     try {
-      const res = await fetch('https://onyxbackend.share.zrok.io/api/blackjack/hit', { method: 'POST', headers: getAuthHeaders() });
+      const res = await fetch('https://onyxbackend.share.zrok.io/api/TwentyOneChallenge/hit', { method: 'POST', headers: getAuthHeaders() });
       const data = await res.json();
       if (typeof data.balance === "number") {
         setBalance(data.balance);
@@ -253,7 +260,7 @@ export function Blackjack() {
   const stand = async () => {
     try {
       const res = await fetch(
-        'https://onyxbackend.share.zrok.io/api/blackjack/stand',
+        'https://onyxbackend.share.zrok.io/api/TwentyOneChallenge/stand',
         { method: 'POST', headers: getAuthHeaders() }
       );
 
@@ -284,7 +291,7 @@ export function Blackjack() {
   const doubleDown = async () => {
     if (balance < currentBet) return;
     try {
-      const res = await fetch('https://onyxbackend.share.zrok.io/api/blackjack/double', { method: 'POST', headers: getAuthHeaders() });
+      const res = await fetch('https://onyxbackend.share.zrok.io/api/TwentyOneChallenge/double', { method: 'POST', headers: getAuthHeaders() });
       const data = await res.json();
       
       playSound('bet');
@@ -315,7 +322,7 @@ export function Blackjack() {
   const split = async () => {
     if (balance < currentBet) return;
     try {
-      const res = await fetch('https://onyxbackend.share.zrok.io/api/blackjack/split', { method: 'POST', headers: getAuthHeaders() });
+      const res = await fetch('https://onyxbackend.share.zrok.io/api/TwentyOneChallenge/split', { method: 'POST', headers: getAuthHeaders() });
       const data = await res.json();
       
       playSound('bet');
@@ -348,10 +355,10 @@ export function Blackjack() {
 
       {/* TOP BAR */}
       <div className="w-full flex justify-between items-center z-10 border-b border-gray-800 pb-4">
-        <div className="text-gray-400 font-bold">Bankroll: <span className="text-green-400 text-xl ml-2">${(balance || 0).toFixed(2)}</span></div>
+        <div className="text-gray-400 font-bold">Points: <span className="text-green-400 text-xl ml-2">{(balance || 0).toFixed(2)} ★</span></div>
         <div className="text-gray-400 font-bold">
-         {splitHand.length > 0 ? "Total Bet:" : "Current Bet:"} 
-         <span className="text-yellow-400 text-xl ml-2">${(currentBet * (splitHand.length > 0 ? 2 : 1)).toFixed(2)}</span>
+         {splitHand.length > 0 ? "Total Bet:" : "Points Used:"} 
+         <span className="text-yellow-400 text-xl ml-2">{(currentBet * (splitHand.length > 0 ? 2 : 1)).toFixed(2)} ★</span>
         </div>
       </div>
 
@@ -360,9 +367,9 @@ export function Blackjack() {
         {gameState === 'betting' ? (
            <div className="flex flex-col items-center animate-in fade-in zoom-in duration-500">
              <div className="w-32 h-32 rounded-full border-2 border-dashed border-blue-500/50 flex items-center justify-center mb-6 shadow-[0_0_30px_rgba(59,130,246,0.1)]">
-               <span className="text-yellow-400 text-3xl font-bold">${currentBet}</span>
+               <span className="text-yellow-400 text-3xl font-bold">{currentBet} ★</span>
              </div>
-             <h2 className="text-2xl font-bold text-gray-300">Place Your Bets</h2>
+             <h2 className="text-2xl font-bold text-gray-300">Choose Your Points</h2>
            </div>
         ) : (
           <div className="w-full flex flex-col items-center gap-8 relative">
@@ -432,14 +439,14 @@ export function Blackjack() {
                   key={amt} onClick={() => addBet(amt)} disabled={balance < amt}
                   className="w-14 h-14 rounded-full font-bold text-sm border-2 border-dashed transition-transform hover:scale-110 active:scale-95 disabled:opacity-50 flex items-center justify-center bg-[#112240] border-gray-600 hover:border-blue-400 hover:text-blue-400"
                 >
-                  ${amt}
+                  {amt} ★
                 </button>
               ))}
             </div>
             
             <div className="flex gap-4 w-full justify-center">
               <button onClick={clearBet} disabled={currentBet === 0} className="px-6 py-2 rounded border border-red-900/50 hover:bg-red-900/30 text-gray-400 hover:text-red-400 font-bold transition-colors">Clear</button>
-              <button onClick={startRound} disabled={currentBet === 0} className="px-10 py-2 rounded bg-green-600 hover:bg-green-500 text-white font-bold transition-colors disabled:opacity-50">DEAL</button>
+              <button onClick={startRound} disabled={currentBet === 0} className="px-10 py-2 rounded bg-green-600 hover:bg-green-500 text-white font-bold transition-colors disabled:opacity-50">PLAY</button>
               <button 
                 onClick={allIn} 
                 disabled={balance < 1} // 🔥 Changed this so they need at least $1 to go all in
@@ -460,7 +467,7 @@ export function Blackjack() {
           </div>
         ) : gameState === 'gameOver' ? (
           <button onClick={() => { setGameState('betting'); setCurrentBet(0); setMessage(''); }} className="bg-blue-600 hover:bg-blue-500 text-white font-bold py-2 px-10 rounded transition-all">
-            NEW BET
+            NEW GAME
           </button>
         ) : (
           <div className="text-gray-400 font-bold animate-pulse py-2">Dealer Turn...</div>

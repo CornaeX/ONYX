@@ -20,10 +20,10 @@ export const Footer = () => {
           <div className="max-w-md">
             <div className="flex items-center gap-3 mb-4">
               <h2 className="text-3xl font-extrabold text-white italic tracking-tighter">
-                ONYX <span className="text-[#007AFF] text-lg not-italic font-normal">vercel.app</span>
+                ONYX <span className="text-[#007AFF] text-lg not-italic font-normal">.share.zrok.io</span>
               </h2>
               <span className="bg-green-500/10 border border-green-500/50 text-green-500 text-[10px] font-bold px-2 py-0.5 rounded uppercase animate-pulse">
-                GPA Jackpot 🎰
+                GPA Power Boost 🎰
               </span>
             </div>
             
@@ -32,7 +32,7 @@ export const Footer = () => {
                 "Built with 10% React, 90% caffeine, and 100% 'it works on my machine.' If it crashes, no it didn't—that's just a surprise maintenance feature for my final."
               </p>
               <p className="text-gray-500 text-xs font-mono bg-[#0B1426] p-3 rounded-lg border border-white/5">
-                <span className="text-blue-400">System.log:</span> The world's first gamble gaming where the house always wins, but the dev loses sleep. 🚀 Built because my GPA needed a jackpot. To the moon! 💎🙌
+                <span className="text-blue-400">System.log:</span> The world’s first mini-game platform powered by probability, persistence, and way too many late nights. 🚀 Built because my GPA needed a  Power Boost. To the moon! 💎🙌
               </p>
             </div>
           </div>
@@ -41,7 +41,7 @@ export const Footer = () => {
           <div className="flex flex-col md:items-end self-end">
             <h3 className="text-white font-bold mb-4 uppercase text-xs tracking-wider opacity-50">Navigation.exe</h3>
             <ul className="flex flex-wrap gap-6 text-sm text-gray-400">
-              {['Table Games', 'Slots', 'Lottery', 'Crash'].map((item) => (
+              {['Strategy Games', 'Arcade Games', 'Random Events', 'Timing Challenge'].map((item) => (
                 <li key={item}>
                   <button 
                     onClick={() => handleCategoryClick(item)} 
@@ -61,7 +61,7 @@ export const Footer = () => {
            <div className="flex gap-4">
              <span className="flex items-center gap-1"><span className="w-2 h-2 bg-green-500 rounded-full animate-ping"></span> Live Final Mode</span>
              <span className="text-gray-800">|</span>
-             <span>No Real Money Involved (Sadly)</span>
+             <span>No Real Money Involved!!</span>
            </div>
         </div>
       </div>

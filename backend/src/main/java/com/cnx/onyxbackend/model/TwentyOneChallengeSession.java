@@ -14,7 +14,7 @@ import java.util.List;
 @Entity
 @Table(name = "blackjack_sessions")
 @Data
-public class BlackjackSession {
+public class TwentyOneChallengeSession {
 
     @Id
     private String id; // We will use UUID here

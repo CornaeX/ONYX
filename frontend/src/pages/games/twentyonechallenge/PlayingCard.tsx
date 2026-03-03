@@ -30,7 +30,7 @@ export const PlayingCard = ({ card, hidden }: { card: CardType; hidden: boolean 
     );
   }
 
-  const isRed = card.suit === '♥' || card.suit === '♦';
+  const isRed = card.suit === '🔥' || card.suit === '💎';
   
   return (
     <div style={style} className="relative w-24 h-36 bg-white rounded-xl border-2 border-gray-300 shadow-2xl flex items-center justify-center">

@@ -15,7 +15,7 @@ import crashSmallGif from "../assets/gifs/crash-small.gif";
 
 // 1. Extract Constants outside component to prevent re-creation
 const CLAIM_THRESHOLD = 50;
-const CATEGORIES = ['All Games', 'Table Games', 'Slots', 'Lottery', 'Crash'];
+const CATEGORIES = ['All Games', 'Strategy Games', 'Arcade Games', 'Random Events', 'Timing Challenge'];
 
 export const Home = () => {
   const [showComingSoon, setShowComingSoon] = useState(false);
@@ -32,10 +32,10 @@ export const Home = () => {
 
   // 3. Memoize the game list to prevent unnecessary filtering on every render
   const allPlayableGames = useMemo(() => [
-    { id: 'blackjack', name: 'Blackjack', path: '/blackjack', img: blackjackSmallGif, category: 'Table Games' },
-    { id: 'slots', name: 'Super Slots', path: '/slotv1', img: slotv1SmallGif, category: 'Slots' },
-    { id: 'lottery', name: 'Lucky Draw', path: '/luckycard', img: luckycardSmallGif, category: 'Lottery' },
-    { id: 'crash', name: 'Crash', path: '/crash', img: crashSmallGif, category: 'Crash' },
+    { id: '21challenge', name: '21 Challenge', path: '/twentyonechallenge', img: blackjackSmallGif, category: 'Strategy Games' },
+    { id: 'spinquest', name: 'Spin Quest', path: '/spinquestv1', img: slotv1SmallGif, category: 'Arcade Games' },
+    { id: 'mysterydraw', name: 'Mystery Draw', path: '/mysterydraw', img: luckycardSmallGif, category: 'Random Events' },
+    { id: 'multiplierrush', name: 'Multiplier Rush', path: '/multiplierrush', img: crashSmallGif, category: 'Timing Challenge' },
   ], []);
 
   const filteredGames = useMemo(() => 
@@ -105,8 +105,8 @@ export const Home = () => {
           <img src={rakeback >= CLAIM_THRESHOLD ? rakebackFullGif : rakebackNotFullGif} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Claim Rakeback" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
           <div className="absolute bottom-4 left-4">
-            <p className="text-[#00D166] font-bold text-xs uppercase tracking-widest">Your Rakeback</p>
-            <p className="text-white text-xl font-bold">${(rakeback || 0).toFixed(2)}</p>
+            <p className="text-[#00D166] font-bold text-xs uppercase tracking-widest">Your Achievement bonus</p>
+            <p className="text-white text-xl font-bold">{(rakeback || 0).toFixed(2)} ★</p>
           </div>
         </div>
 
@@ -115,16 +115,16 @@ export const Home = () => {
           <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors" />
         </div>
 
-        <div onClick={() => navigate("/crash")} className="h-64 rounded-3xl relative overflow-hidden group cursor-pointer transition-all duration-500 hover:shadow-[0_0_30px_rgba(215,0,225,0.4)] border border-transparent">
+        <div onClick={() => navigate("/MultiplierRush")} className="h-64 rounded-3xl relative overflow-hidden group cursor-pointer transition-all duration-500 hover:shadow-[0_0_30px_rgba(215,0,225,0.4)] border border-transparent">
           <img src={crashCardGif} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" alt="Crash Game" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60 group-hover:opacity-40 transition-opacity" />
           <div className="absolute bottom-4 left-4">
-            <p className="text-[#FF00E5] font-bold text-xs uppercase tracking-widest">Instant Win</p>
-            <p className="text-white text-xl font-bold italic">PLAY CRASH</p>
+            <p className="text-[#FF00E5] font-bold text-xs uppercase tracking-widest">Perfect Round!</p>
+            <p className="text-white text-xl font-bold italic">PLAY TIMING CHALLENGE</p>
           </div>
-          <div className="absolute top-4 right-4 bg-white/10 backdrop-blur-md p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+          {/* <div className="absolute top-4 right-4 bg-white/10 backdrop-blur-md p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
             <Search className="w-4 h-4 text-white rotate-45" /> 
-          </div>
+          </div> */}
         </div>
       </section>
 

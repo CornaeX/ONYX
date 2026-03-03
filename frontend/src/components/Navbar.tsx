@@ -38,7 +38,7 @@ export const Navbar = () => {
         <div className="flex items-center gap-3 mr-3 md:mr-6">
           <div className="flex flex-col items-end">
             <span className="text-[10px] font-bold text-[#00D166] uppercase tracking-wider mb-1">
-              Rakeback
+              Achievement bonus
             </span>
             
             <div className="w-24 h-1.5 bg-[#121E36] rounded-full overflow-hidden">
@@ -49,7 +49,7 @@ export const Navbar = () => {
             </div>
 
             <span className="text-[9px] text-gray-500 mt-1">
-              ${(rakeback || 0).toFixed(2)} / ${CLAIM_THRESHOLD}
+              {(rakeback || 0).toFixed(2)}★ / {CLAIM_THRESHOLD}★
             </span>
           </div>
 
@@ -97,14 +97,14 @@ export const Navbar = () => {
                 <button 
                   onClick={() => navigate("/Bank")}
                   className="bg-[#007AFF] hover:bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-sm transition-all mr-3">
-                  Wallet
+                  wallet
                 </button>
                 <div className="flex flex-col items-end">
                   <span className="text-[10px] text-gray-500 font-bold uppercase">
                     {user.role}
                   </span>
                   <span className="text-white font-mono font-bold leading-none">
-                    ${balance.toLocaleString()}
+                    {balance.toLocaleString()}★
                   </span>
                 </div>
               </div>

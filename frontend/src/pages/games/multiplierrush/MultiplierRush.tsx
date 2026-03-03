@@ -10,7 +10,7 @@ const getAuthHeaders = () => ({
   Authorization: `Bearer ${localStorage.getItem("token") || ""}`,
 });
 
-export function Crash() {
+export function MultiplierRush() {
   const balance = useStore((s) => s.balance);
   const setBalance = useStore((s) => s.setBalance);
   const setRakeback = useStore((s) => s.setRakeback);
@@ -87,14 +87,14 @@ export function Crash() {
 
     const interval = setInterval(() => {
         setMultiplier((prev) => {
-        const next = prev + 0.005; // Smooth increment
+        const next = prev + 0.0005; // Smooth increment
 
         // Check if we hit the server's crash point
         if (next >= serverCrashPoint) {
             clearInterval(interval);
             setCrashed(true);
             setPlaying(false);
-            setMessage(`CRASHED AT ${serverCrashPoint.toFixed(2)}x 💥`);
+            setMessage(`CRASHED AT ${serverCrashPoint.toFixed(4)}x 💥`);
             setCurrentBet(0);
             playSound("lose");
             return serverCrashPoint; // Lock it at the exact crash point
@@ -122,7 +122,7 @@ export function Crash() {
 
   setPlaying(false);
   setCurrentBet(0); // <--- Add this to reset bet on win
-  setMessage(`Cashed out at ${multiplier.toFixed(2)}x`);
+  setMessage(`Cashed out at ${multiplier.toFixed(4)}x`);
   playSound("win");
 };
 
@@ -140,15 +140,15 @@ export function Crash() {
       {/* TOP BAR */}
       <div className="w-full flex justify-between items-center border-b border-gray-800 pb-4">
         <div className="text-gray-400 font-bold">
-          Bankroll:
+          Points:
           <span className="text-green-400 text-xl ml-2">
-            ${(balance || 0).toFixed(2)}
+            {(balance || 0).toFixed(2)} ★
           </span>
         </div>
         <div className="text-gray-400 font-bold">
-          Current Bet:
+          Points Used:
           <span className="text-yellow-400 text-xl ml-2">
-            ${currentBet.toFixed(2)}
+            {currentBet.toFixed(2)} ★
           </span>
         </div>
       </div>
@@ -159,7 +159,7 @@ export function Crash() {
   <div className={`text-6xl font-black transition-all duration-200 ${
     crashed ? "text-red-500" : "text-green-400"
   }`}>
-    {multiplier.toFixed(2)}x
+    {multiplier.toFixed(4)}x
   </div>
 
   {/* Real-time Profit Display */}
@@ -189,7 +189,7 @@ export function Crash() {
                   disabled={balance < amt}
                   className="w-14 h-14 rounded-full font-bold text-sm border-2 border-dashed bg-[#112240] border-gray-600 hover:border-blue-400 hover:text-blue-400 transition-transform hover:scale-110 disabled:opacity-50"
                 >
-                  ${amt}
+                  {amt} ★
                 </button>
               ))}
             </div>

@@ -2,14 +2,14 @@ package com.cnx.onyxbackend.dto;
 
 import java.util.List;
 
-public class SlotResponseDTO {
+public class SpinQuestResponseDTO {
 
     private List<String> result;
     private double payout;
     private double balance;
     private double rakebackAvailable;
 
-    public SlotResponseDTO(
+    public SpinQuestResponseDTO(
         List<String> result,
         double payout,
         double balance,

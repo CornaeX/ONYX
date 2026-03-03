@@ -2,7 +2,7 @@ package com.cnx.onyxbackend.dto;
 
 import java.util.List;
 
-public class BlackjackResponseDTO {
+public class TwentyOneChallengeResponseDTO {
 
     private String uid;
     private double betAmount;
@@ -15,7 +15,7 @@ public class BlackjackResponseDTO {
     private double rakebackAvailable;
 
     // constructor
-    public BlackjackResponseDTO(
+    public TwentyOneChallengeResponseDTO(
             String uid,
             double betAmount,
             List<String> dealerHand,

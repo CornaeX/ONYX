@@ -7,10 +7,10 @@ import { fetchProfile } from './services/userService';
 
 // 1. These are NAMED exports (Keep the curly braces)
 import { Home } from './pages/Home';
-import { Blackjack } from './pages/games/blackjack/Blackjack';
-import { LuckyCard } from './pages/games/luckycard/LuckyCard';
-import { SlotV1 } from './pages/games/slotv1/SlotV1';
-import { Crash } from "./pages/games/Crash/Crash";
+import { TwentyOneChallenge } from './pages/games/twentyonechallenge/TwentyOneChallenge';
+import { MysteryDraw } from './pages/games/mysterydraw/MysteryDraw';
+import { SpinQuestV1 } from './pages/games/spinquestv1/SpinQuestV1';
+import { MultiplierRush } from "./pages/games/multiplierrush/MultiplierRush";
 
 // 2. These are DEFAULT exports (Remove the curly braces)
 import Login from './pages/Login';
@@ -61,10 +61,10 @@ function App() {
       {/* Main Layout Branch */}
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
-        <Route path="/blackjack" element={<Blackjack />} />
-        <Route path="/luckycard" element={<LuckyCard />} />
-        <Route path="/slotv1" element={<SlotV1 />} />
-        <Route path="/crash" element={<Crash />} />
+        <Route path="/twentyonechallenge" element={<TwentyOneChallenge />} />
+        <Route path="/mysterydraw" element={<MysteryDraw />} />
+        <Route path="/spinquestv1" element={<SpinQuestV1 />} />
+        <Route path="/multiplierrush" element={<MultiplierRush />} />
       </Route>
 
       <Route element={<BankLayout />}>

@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import java.util.List;
 
 @Entity
-public class SlotSession {
+public class SpinQuestSession {
 
     @Id
     private String id;
