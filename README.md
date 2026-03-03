@@ -1,6 +1,6 @@
 # 🎲 Onyx Gaming Platform
 
-![Onyx Architecture](https://drive.google.com/uc?export=view&id=1z9Nai3NOy8Kt-AwEytMzl3DR9ppaqlhb)
+![Onyx Architecture](docs/ONYX.png)
 
 Onyx is a full-stack, web-based gaming and gambling platform. It features a suite of interactive games including **Crash, Blackjack, Slots, and Lucky Card**. Built with a modern React frontend and a robust Spring Boot Java backend, the platform leverages Firebase for secure authentication and real-time game state management.
 
