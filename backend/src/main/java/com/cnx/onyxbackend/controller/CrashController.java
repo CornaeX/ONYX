@@ -1,11 +1,8 @@
 package com.cnx.onyxbackend.controller;
 
 import com.cnx.onyxbackend.dto.CrashResponseDTO;
-import com.cnx.onyxbackend.model.User;
 import com.cnx.onyxbackend.service.CrashService;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.Map;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 

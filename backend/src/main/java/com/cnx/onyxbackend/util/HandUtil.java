@@ -40,7 +40,6 @@ public class HandUtil {
     }
 
     public static boolean isSoft(List<String> hand) {
-        int total = 0;
         int aceCount = 0;
 
         for (String card : hand) {

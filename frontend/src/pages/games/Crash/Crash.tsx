@@ -126,13 +126,13 @@ export function Crash() {
   playSound("win");
 };
 
-  const resetGame = () => {
-    setCurrentBet(0);
-    setMultiplier(1);
-    setPlaying(false);
-    setCrashed(false);
-    setMessage("");
-  };
+  // const resetGame = () => {
+  //   setCurrentBet(0);
+  //   setMultiplier(1);
+  //   setPlaying(false);
+  //   setCrashed(false);
+  //   setMessage("");
+  // };
 
   return (
     <div className="flex flex-col items-center justify-between h-[650px] w-full max-w-4xl mx-auto bg-[#070E20] rounded-2xl border border-gray-800 p-8 shadow-2xl relative overflow-hidden text-white">

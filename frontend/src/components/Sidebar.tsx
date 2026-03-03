@@ -1,10 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { 
   Gamepad2, LayoutGrid, Rocket, 
-  Crown, Gift, Award, 
-  Trophy, Users, Headset, ChevronUp,
-  Bomb, Globe, Coins
-} from 'lucide-react';
+  Gift, ChevronUp, } from 'lucide-react';
 import { LogOut } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useStore } from "../store/useStore";

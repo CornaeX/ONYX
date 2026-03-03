@@ -6,7 +6,7 @@ import cardSwipeSFX from '../../../assets/sounds/cardswipe.mp3';
 import clearBetSFX from '../../../assets/sounds/clearbet.mp3';
 import winSFX from '../../../assets/sounds/win.mp3';
 import loseSFX from '../../../assets/sounds/lose.mp3';
-import { fetchProfile } from "../../../services/userService";
+// import { fetchProfile } from "../../../services/userService";
 
 // Setup your auth headers here (assuming Bearer token from localStorage)
 const getAuthHeaders = () => ({
