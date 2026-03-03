@@ -9,10 +9,10 @@ Onyx is a full-stack, web-based gaming and gambling platform. It features a suit
 ## ✨ Features
 
 * **Interactive Games:**
-    * 📈 **Crash:**
-    * 🃏 **Blackjack:**
-    * 🎰 **Slots (V1):**
-    * 🍀 **Lucky Card:**
+    * 📈 **Crash:** A real-time multiplier game.
+    * 🃏 **Blackjack:** Classic casino card game with dealer logic. 
+    * 🎰 **Slots (V1):** A virtual slot machine experience.
+    * 🍀 **Lucky Card:** A specialized card prediction game.
 * **Virtual Wallet System:** Manage user balances, bets, and payouts through a dedicated Bank page.
 * **Secure Authentication:** Powered by Firebase Auth, including secure token validation on the Spring Boot backend.
 * **Engaging UI/UX:** Built with Tailwind CSS, featuring custom animations, sound effects, and responsive design.
@@ -56,5 +56,5 @@ Follow these instructions to get a copy of the project up and running on your lo
    cd backend
 
 2. Configure Firebase Admin SDK:
-* Generate a private key `.json` file from your Firebase Console (Project Settings > Service Accounts).
-* Place the file in a secure location and reference it in your `src/main/resources/application.properties`.
+    * Generate a private key `.json` file from your Firebase Console (Project Settings > Service Accounts).
+    * Place the file in a secure location and reference it in your `src/main/resources/application.properties`.
