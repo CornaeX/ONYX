@@ -8,13 +8,14 @@ Onyx is a full-stack, web-based gaming and gambling platform. It features a suit
 
 ## ✨ Features
 
-* **Interactive Games:** * 📈 **Crash:** A real-time multiplier game.
-    * 🃏 **Blackjack:** Classic casino card game with dealer logic.
-    * 🎰 **Slots (V1):** A virtual slot machine experience.
-    * 🍀 **Lucky Card:** A specialized card prediction game.
+* **Interactive Games:**
+    * 📈 **Crash:**
+    * 🃏 **Blackjack:**
+    * 🎰 **Slots (V1):**
+    * 🍀 **Lucky Card:**
 * **Virtual Wallet System:** Manage user balances, bets, and payouts through a dedicated Bank page.
 * **Secure Authentication:** Powered by Firebase Auth, including secure token validation on the Spring Boot backend.
-* **Engaging UI/UX:** Built with Tailwind CSS, featuring custom animations, sound effects (`win.mp3`, `lose.mp3`, etc.), and responsive design.
+* **Engaging UI/UX:** Built with Tailwind CSS, featuring custom animations, sound effects, and responsive design.
 * **State Management:** Global state management using Zustand for smooth frontend performance.
 
 ---
@@ -24,10 +25,10 @@ Onyx is a full-stack, web-based gaming and gambling platform. It features a suit
 
 
 ### Frontend
-* **Framework:** React 18 + Vite
+* **Framework:** React + Vite
 * **Language:** TypeScript
 * **Styling:** Tailwind CSS
-* **State Management:** Zustand (`useStore.ts`)
+* **State Management:** Zustand
 * **Authentication:** Firebase Auth
 
 ### Backend
@@ -46,7 +47,7 @@ Follow these instructions to get a copy of the project up and running on your lo
 * [Node.js](https://nodejs.org/) (v16 or higher)
 * [Java JDK](https://adoptium.net/) (v17 or higher recommended)
 * [Maven](https://maven.apache.org/) (Optional, project includes Maven Wrapper)
-* A [Firebase](https://firebase.google.com/) Project with Authentication enabled.
+* [Firebase](https://firebase.google.com/) Project with Authentication enabled.
 
 ### 1. Backend Setup (Spring Boot)
 
@@ -54,3 +55,6 @@ Follow these instructions to get a copy of the project up and running on your lo
    ```bash
    cd backend
 
+2. Configure Firebase Admin SDK:
+* Generate a private key `.json` file from your Firebase Console (Project Settings > Service Accounts).
+* Place the file in a secure location and reference it in your `src/main/resources/application.properties`.
