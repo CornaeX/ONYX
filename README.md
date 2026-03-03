@@ -58,3 +58,115 @@ Follow these instructions to get a copy of the project up and running on your lo
 2. Configure Firebase Admin SDK:
     * Generate a private key `.json` file from your Firebase Console (Project Settings > Service Accounts).
     * Place the file in a secure location and reference it in your `src/main/resources/application.properties`.
+    ```bash
+    # Example application.properties
+    server.port=8080
+    firebase.config.path=classpath:firebase-service-account.json
+
+3. Run the application:
+    ```bash
+    ./mvnw spring-boot:run
+
+### 2. Frontend Setup (React/Vite)
+
+1. Navigate to the frontend directory:
+    ```bash
+    cd frontend
+
+2. Install dependencies:
+    ```bash
+    npm install
+
+3. Set up environment variables:
+    * Create a .env file in the frontend root.
+    * Add your Firebase configuration keys:
+    ```bash
+    VITE_FIREBASE_API_KEY=your_api_key
+    VITE_FIREBASE_AUTH_DOMAIN=your_project.firebaseapp.com
+    VITE_FIREBASE_PROJECT_ID=your_project_id
+    VITE_API_BASE_URL=http://localhost:8080/api
+
+4. Start the development server:
+    ```bash
+    npm run dev
+
+## 📂 System Architecture
+
+
+
+### Frontend Structure
+Our React application is organized modularly by features and components:
+```bash
+📁 frontend/
+├── 📁 public/
+│   ├── 🖼️ noise.png
+│   └── 🖼️ vite.svg
+├── 📁 src/
+│   ├── 📁 assets/
+│   │   ├── 📁 gifs/
+│   │   │   ├── 🖼️ blackjack-small.gif
+│   │   │   ├── 🖼️ crash-card.gif
+│   │   │   ├── 🖼️ crash-small.gif
+│   │   │   ├── 🖼️ daily-spin.gif
+│   │   │   ├── 🖼️ luckycard-small.gif
+│   │   │   ├── 🖼️ rakebackfull-card.gif
+│   │   │   ├── 🖼️ rakebacknotfull-card.gif
+│   │   │   └── 🖼️ slotv1-small.gif
+│   │   ├── 📁 images/
+│   │   │   ├── 🖼️ sidebar-clove.jpg
+│   │   │   ├── 🖼️ sidebar-coin.jpg
+│   │   │   ├── 🖼️ sidebar-dice.jpg
+│   │   │   └── 🖼️ sidebar-rocket.jpg
+│   │   ├── 📁 sounds/
+│   │   │   ├── 🎵 betplace.mp3
+│   │   │   ├── 🎵 cardswipe.mp3
+│   │   │   ├── 🎵 clearbet.mp3
+│   │   │   ├── 🎵 lose.mp3
+│   │   │   └── 🎵 win.mp3
+│   │   └── 🖼️ react.svg
+│   ├── 📁 components/
+│   │   ├── 📄 AuthLayout.tsx
+│   │   ├── 📄 Footer.tsx
+│   │   ├── 📄 Layout.tsx
+│   │   ├── 📄 Navbar.tsx
+│   │   ├── 📄 Sidebar.tsx
+│   │   └── 📄 WinnerPanel.tsx
+│   ├── 📁 firebase/
+│   │   └── 📄 firebase.ts
+│   ├── 📁 pages/
+│   │   ├── 📁 games/
+│   │   │   ├── 📁 Crash/
+│   │   │   │   └── 📄 Crash.tsx
+│   │   │   ├── 📁 blackjack/
+│   │   │   │   ├── 📄 Blackjack.tsx
+│   │   │   │   └── 📄 PlayingCard.tsx
+│   │   │   ├── 📁 luckycard/
+│   │   │   │   └── 📄 LuckyCard.tsx
+│   │   │   └── 📁 slotv1/
+│   │   │       └── 📄 SlotV1.tsx
+│   │   ├── 📄 Bank.tsx
+│   │   ├── 📄 Home.tsx
+│   │   ├── 📄 Login.tsx
+│   │   └── 📄 Register.tsx
+│   ├── 📁 services/
+│   │   ├── 📄 authService.ts
+│   │   ├── 📄 userService.ts
+│   │   └── 📄 walletService.ts
+│   ├── 📁 store/
+│   │   └── 📄 useStore.ts
+│   ├── 🎨 App.css
+│   ├── 📄 App.tsx
+│   ├── 🎨 index.css
+│   └── 📄 main.tsx
+├── ⚙️ .gitignore
+├── 📄 eslint.config.js
+├── 🌐 index.html
+├── ⚙️ package-lock.json
+├── ⚙️ package.json
+├── 📄 postcss.config.cjs
+├── 📄 tailwind.config.cjs
+├── ⚙️ tsconfig.app.json
+├── ⚙️ tsconfig.json
+├── ⚙️ tsconfig.node.json
+└── 📄 vite.config.ts
+```
