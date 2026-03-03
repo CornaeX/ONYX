@@ -94,10 +94,14 @@ public class UserController {
     }
 
     @PostMapping("/claim-rakeback")
-    public Map<String, Double> claimRakeback(
-            @AuthenticationPrincipal String uid
+    public ResponseEntity<?> claimRakeback(
+            Authentication authentication
     ) throws Exception {
 
-        return transactionService.claimRakeback(uid);
+        String uid = authentication.getName();
+
+        Map<String, Double> result = transactionService.claimRakeback(uid);
+
+        return ResponseEntity.ok(result);
     }
 }

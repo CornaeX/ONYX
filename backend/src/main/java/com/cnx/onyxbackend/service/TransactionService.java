@@ -44,18 +44,27 @@ public class TransactionService {
     }
 
     @Transactional
-    public Map<String, Double> claimRakeback(String uid) throws Exception {
-        // 🔥 FIXED: Changed return type in header from BlackjackResponseDTO to Map<String, Double>
-        User user = userRepository.findByIdForUpdate(uid).orElseThrow();
+    public Map<String, Double> claimRakeback(String uid) {
+
+        User user = userRepository.findByIdForUpdate(uid)
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         double amountToClaim = Math.floor(user.getRakebackAvailable());
-        if (amountToClaim < 1.0) throw new RuntimeException("You need at least $1.00 to claim.");
+
+        if (amountToClaim < 1.0) {
+            throw new RuntimeException("You need at least $1.00 to claim.");
+        }
 
         user.setBalance(user.getBalance() + amountToClaim);
         user.setRakebackAvailable(user.getRakebackAvailable() - amountToClaim);
         user.setRakebackClaimed(user.getRakebackClaimed() + amountToClaim);
 
         userRepository.save(user);
-        return Map.of("claimed", amountToClaim);
+
+        return Map.of(
+                "claimed", amountToClaim,
+                "newBalance", user.getBalance(),
+                "newRakeback", user.getRakebackAvailable()
+        );
     }
 }

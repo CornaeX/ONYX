@@ -39,7 +39,7 @@ public class CrashService {
 
         user.setBalance(user.getBalance() - bet);
 
-        double rake = bet * 0.02;
+        double rake = bet * 0.001;
         user.setRakebackAvailable(user.getRakebackAvailable() + rake);
 
         CrashSession session = new CrashSession();

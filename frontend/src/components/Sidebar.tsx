@@ -20,13 +20,19 @@ export const Sidebar = () => {
   const [isCasinoOpen, setIsCasinoOpen] = useState(true);
   const { user, logout } = useStore();
   const navigate = useNavigate();
+  const { setActiveCategory } = useStore();
 
   const casinoItems = [
-    { icon: Gamepad2, label: 'Table games' },
+    { icon: Gamepad2, label: 'Table Games' },
     { icon: LayoutGrid, label: 'Slots' },
     { icon: Gift, label: 'Lottery' },
     { icon: Rocket, label: 'Crash' },
   ];
+
+  const handleCategoryClick = (label: string) => {
+    setActiveCategory(label);
+    navigate("/"); // Ensure user is on home to see the change
+  };
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -98,8 +104,12 @@ export const Sidebar = () => {
             <div className="overflow-hidden">
               <div className="pb-3 px-1">
                 {casinoItems.map((item, idx) => (
-                  <button key={idx} className="w-full flex items-center gap-3 px-4 py-2.5 hover:text-white transition-colors group">
-                    <item.icon size={18} className="text-[#4e6285] group-hover:text-blue-400 transition-colors" />
+                  <button 
+                    key={idx} 
+                    onClick={() => handleCategoryClick(item.label)} // Use the label
+                    className="w-full flex items-center gap-3 px-4 py-2.5 hover:text-white transition-colors group"
+                  >
+                    <item.icon size={18} />
                     <span className="text-[13px] font-medium">{item.label}</span>
                   </button>
                 ))}

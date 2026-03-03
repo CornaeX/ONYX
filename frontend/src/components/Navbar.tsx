@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Search, Gift, User } from 'lucide-react';
+import { Gift, User } from 'lucide-react'; // Removed Search import
 import { useStore } from '../store/useStore';
 import WinnerPanel from './WinnerPanel';
 import { useNavigate } from "react-router-dom";
@@ -20,23 +20,14 @@ export const Navbar = () => {
   );
 
   return (
-    // Removed border-b and border-[#1E2D4A] from this wrapper
     <nav className="h-20 flex items-center justify-between px-6 w-full">
       
       {/* LEFT ZONE: Fixed Width */}
       <div className="flex items-center gap-4">
-        {/* Search Bar */}
-        <div className="hidden md:flex items-center bg-[#0B1426] border border-[#1E2D4A] rounded-full px-4 py-2 w-64 shrink-0">
-          <Search className="w-4 h-4 text-gray-500" />
-          <input 
-            type="text" 
-            placeholder="Search game..." 
-            className="bg-transparent border-none text-sm text-white focus:outline-none ml-2 w-full"
-          />
-        </div>
+        {/* Search Bar Removed */}
 
-        {/* Winner Panel */}
-        <div className="hidden lg:block border-l border-[#1E2D4A] pl-4">
+        {/* Winner Panel - Adjusted padding since search is gone */}
+        <div className="hidden lg:block">
           <WinnerPanel />
         </div>
       </div>
@@ -50,7 +41,6 @@ export const Navbar = () => {
               Rakeback
             </span>
             
-            {/* FIX: Added a track background (w-24, h-1.5) and applied progressPercent */}
             <div className="w-24 h-1.5 bg-[#121E36] rounded-full overflow-hidden">
               <div 
                 className="h-full bg-gradient-to-r from-[#00D166] to-[#00FFA3] transition-all duration-300"
@@ -58,7 +48,6 @@ export const Navbar = () => {
               ></div>
             </div>
 
-            {/* FIX: Added fallback (rakeback || 0) so the app doesn't crash if state is loading */}
             <span className="text-[9px] text-gray-500 mt-1">
               ${(rakeback || 0).toFixed(2)} / ${CLAIM_THRESHOLD}
             </span>
@@ -80,9 +69,8 @@ export const Navbar = () => {
                   const data = await res.json();
                   alert(`Claimed $${data.claimed.toFixed(2)}`);
                   
-                  // Update store instantly instead of reload
-                  useStore.getState().setRakeback(0);
-                  useStore.getState().setBalance(balance + data.claimed);
+                  useStore.getState().setRakeback(data.newRakeback);
+                  useStore.getState().setBalance(data.newBalance);
                 }
               } catch (e) {
                 console.error("Failed to claim rakeback", e);
@@ -139,12 +127,12 @@ export const Navbar = () => {
           ) : (
             <div className="flex gap-3">
               <button 
-              onClick={() => navigate("/login")}
-              className="text-gray-400 hover:text-white font-bold text-sm px-2">Sign In</button>
+                onClick={() => navigate("/login")}
+                className="text-gray-400 hover:text-white font-bold text-sm px-2">Sign In</button>
               
               <button 
-              onClick={() => navigate("/register")}
-              className="bg-[#007AFF] text-white px-6 py-2.5 rounded-xl font-bold text-sm">
+                onClick={() => navigate("/register")}
+                className="bg-[#007AFF] text-white px-6 py-2.5 rounded-xl font-bold text-sm">
                 Register
               </button>
             </div>

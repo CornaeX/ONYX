@@ -67,7 +67,7 @@ const WinnerPanel = () => {
                   <span className="text-xs font-bold text-white">{winner.name}</span>
                 </div>
                 <div className="text-[11px] text-gray-400">
-                  Won <AnimatedPrize prize={prize} /> <span className="text-emerald-500/80">Tokens</span>
+                  Won <AnimatedPrize prize={prize} /> <span className="text-emerald-500/80">$</span>
                 </div>
               </div>
             </div>
